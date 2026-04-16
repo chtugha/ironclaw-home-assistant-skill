@@ -27,9 +27,10 @@ ironclaw tool install "$WASM_FILE" \
     --name "$TOOL_NAME"
 
 echo "==> Installing skill..."
-ironclaw skills install \
-    --name "home-assistant" \
-    --file "$SKILL_FILE"
+SKILL_DIR="${HOME}/.ironclaw/skills/home-assistant"
+mkdir -p "$SKILL_DIR"
+cp "$SKILL_FILE" "$SKILL_DIR/SKILL.md"
+echo "  Installed skill to: $SKILL_DIR/SKILL.md"
 
 echo ""
 echo "==> Configuring ha_token secret..."

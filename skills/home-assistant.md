@@ -1,3 +1,52 @@
+---
+name: home-assistant
+version: 0.1.0
+description: Full control over Home Assistant — lights, climate, switches, MQTT, Modbus, automations, scripts, and more via ha-tool
+activation:
+  keywords:
+    - home assistant
+    - homeassistant
+    - light
+    - lights
+    - switch
+    - thermostat
+    - climate
+    - temperature
+    - automation
+    - scene
+    - script
+    - sensor
+    - smart home
+    - mqtt
+    - modbus
+    - cover
+    - blind
+    - lock
+    - fan
+    - alarm
+    - media player
+    - notify
+    - notification
+    - entity
+    - ha
+  patterns:
+    - "turn (on|off|toggle).*(light|switch|fan|plug|outlet)"
+    - "set.*temperature"
+    - "what.*lights.*on"
+    - "run.*automation"
+    - "activate.*scene"
+    - "publish.*mqtt"
+    - "modbus.*(read|write)"
+    - "home assistant"
+    - "restart.*home"
+    - "check.*config"
+  tags:
+    - home-automation
+    - iot
+    - smarthome
+  max_context_tokens: 3000
+---
+
 # Home Assistant Skill
 
 You have access to the `ha-tool` which gives you full control over the user's Home Assistant instance via the REST API.
