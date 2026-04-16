@@ -27,7 +27,7 @@ ironclaw tool install "$WASM_FILE" \
     --name "$TOOL_NAME"
 
 echo "==> Installing skill..."
-ironclaw skill install \
+ironclaw skills install \
     --name "home-assistant" \
     --file "$SKILL_FILE"
 
