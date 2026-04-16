@@ -5,6 +5,7 @@ const MAX_STATES: usize = 500;
 const MAX_HOURS_BACK: u32 = 8760;
 const MAX_ENTITY_ID_LEN: usize = 255;
 const MAX_EVENT_TYPE_LEN: usize = 255;
+const MAX_STATE_LEN: usize = 255;
 
 fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -231,8 +232,8 @@ pub fn get_state(base: &str, entity_id: &str) -> Result<String, String> {
 pub fn set_state(base: &str, entity_id: &str, state: &str, attributes: Option<&serde_json::Value>) -> Result<String, String> {
     validate_entity_id(entity_id)?;
     validate_not_empty(state, "state")?;
-    if state.len() > 255 {
-        return Err("state value too long (max 255 characters)".into());
+    if state.len() > MAX_STATE_LEN {
+        return Err(format!("state value too long (max {} characters)", MAX_STATE_LEN));
     }
     let mut body = serde_json::json!({"state": state});
     if let Some(attrs) = attributes {
@@ -262,7 +263,7 @@ fn validate_event_type(s: &str) -> Result<(), String> {
         return Err(format!("event_type must be 1-{} characters", MAX_EVENT_TYPE_LEN));
     }
     for c in s.chars() {
-        if !c.is_alphanumeric() && c != '_' && c != '.' {
+        if !c.is_alphanumeric() && c != '_' && c != '.' && c != '-' {
             return Err(format!("event_type contains invalid character '{}'", c));
         }
     }
@@ -559,6 +560,7 @@ mod tests {
         assert!(validate_event_type("custom_event").is_ok());
         assert!(validate_event_type("my.event").is_ok());
         assert!(validate_event_type("event123").is_ok());
+        assert!(validate_event_type("my-integration-event").is_ok());
         assert!(validate_event_type("").is_err());
         assert!(validate_event_type("bad/event").is_err());
         assert!(validate_event_type("bad event").is_err());
