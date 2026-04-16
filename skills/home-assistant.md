@@ -28,18 +28,12 @@ activation:
     - notify
     - notification
     - entity
-    - ha
   patterns:
     - "turn (on|off|toggle).*(light|switch|fan|plug|outlet)"
     - "set.*temperature"
-    - "what.*lights.*on"
-    - "run.*automation"
-    - "activate.*scene"
-    - "publish.*mqtt"
+    - "(run|trigger).*automation"
+    - "(publish|send).*mqtt"
     - "modbus.*(read|write)"
-    - "home assistant"
-    - "restart.*home"
-    - "check.*config"
   tags:
     - home-automation
     - iot
