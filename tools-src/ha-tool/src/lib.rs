@@ -271,7 +271,8 @@ enum HaAction {
     },
     ToggleAutomation {
         entity_id: String,
-        enabled: bool,
+        #[serde(default)]
+        enabled: Option<bool>,
     },
     ListScripts,
     RunScript {
@@ -334,6 +335,7 @@ fn get_states(base_url: &str, domain_filter: Option<&str>) -> Result<String, Str
     let mut result = serde_json::json!({
         "entities": slice,
         "count": slice.len(),
+        "total": total,
     });
     if truncated {
         result["_truncated"] = serde_json::json!(true);
@@ -608,8 +610,18 @@ fn modbus_write(
 ) -> Result<String, String> {
     let wtype = write_type.unwrap_or("holding");
     let service = match wtype {
-        "holding" => "write_register",
-        "coil" => "write_coil",
+        "holding" => {
+            if !value.is_number() {
+                return Err("modbus_write: value must be a number for write_type 'holding'".into());
+            }
+            "write_register"
+        }
+        "coil" => {
+            if !value.is_boolean() {
+                return Err("modbus_write: value must be a boolean (true/false) for write_type 'coil'".into());
+            }
+            "write_coil"
+        }
         "input" => {
             return Err(
                 "Modbus input registers are read-only. Use 'holding' or 'coil' for writing.".into(),
@@ -656,6 +668,24 @@ fn get_calendar_events(
     let s = start.unwrap_or(&default_start);
     let e = end.unwrap_or(&default_end);
 
+    for (val, name) in &[(s, "start"), (e, "end")] {
+        validate_len(val, name)?;
+        let b = val.as_bytes();
+        let valid = b.len() >= 11
+            && b[0..4].iter().all(|c| c.is_ascii_digit())
+            && b[4] == b'-'
+            && b[5..7].iter().all(|c| c.is_ascii_digit())
+            && b[7] == b'-'
+            && b[8..10].iter().all(|c| c.is_ascii_digit())
+            && b[10] == b'T';
+        if !valid {
+            return Err(format!(
+                "{} must be an ISO 8601 timestamp (e.g. '2024-01-15T00:00:00+00:00')",
+                name
+            ));
+        }
+    }
+
     let path = format!(
         "/api/calendars/{}?start={}&end={}",
         url_encode(entity_id),
@@ -681,7 +711,7 @@ fn trigger_automation(base_url: &str, entity_id: &str) -> Result<String, String>
     call_service(base_url, "automation", "trigger", Some(&data))
 }
 
-fn toggle_automation(base_url: &str, entity_id: &str, enabled: bool) -> Result<String, String> {
+fn toggle_automation(base_url: &str, entity_id: &str, enabled: Option<bool>) -> Result<String, String> {
     validate_entity_id(entity_id)?;
     if !entity_id.starts_with("automation.") {
         return Err(format!(
@@ -689,7 +719,7 @@ fn toggle_automation(base_url: &str, entity_id: &str, enabled: bool) -> Result<S
             entity_id
         ));
     }
-    let svc = if enabled { "turn_on" } else { "turn_off" };
+    let svc = if enabled.unwrap_or(true) { "turn_on" } else { "turn_off" };
     let data = serde_json::json!({ "entity_id": entity_id });
     call_service(base_url, "automation", svc, Some(&data))
 }
@@ -710,7 +740,7 @@ fn run_script(
             entity_id
         ));
     }
-    let script_name = entity_id.trim_start_matches("script.");
+    let script_name = entity_id.strip_prefix("script.").unwrap_or(entity_id);
     let mut data = serde_json::json!({});
     if let Some(vars) = variables {
         data["variables"] = vars.clone();
