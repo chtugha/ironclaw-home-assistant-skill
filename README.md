@@ -68,7 +68,7 @@ The script does the following automatically:
 2. **Installs** the tool into IronClaw: `ironclaw tool install --name ha-tool --wasm dist/ha_tool.wasm --capabilities …`
 3. **Installs** the agent skill: `ironclaw skill install --name home-assistant --file skills/home-assistant.md`
 4. **Runs** `ironclaw tool setup ha-tool` — you will be prompted to enter your HA long-lived access token
-5. **Prompts** for your HA base URL and writes it to `$(ironclaw workspace path)/ha/base_url`
+5. **Prompts** for your HA base URL and writes it to `~/.ironclaw/workspace/ha/base_url`
 
 ### Step 3 — Get a Home Assistant long-lived access token
 
@@ -127,7 +127,7 @@ ironclaw tool setup ha-tool
 ### Write the base URL
 
 ```bash
-echo 'http://homeassistant.local:8123' > "$(ironclaw workspace path)/ha/base_url"
+echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
 ```
 
 Replace `http://homeassistant.local:8123` with your actual HA address. This can be:
@@ -150,12 +150,12 @@ Because of this, the HA base URL cannot be stored as a secret either — it is i
 | Value | Stored as | Where |
 |---|---|---|
 | `ha_token` | Secret (injected at HTTP boundary) | IronClaw secret store |
-| HA base URL | Workspace file | `$(ironclaw workspace path)/ha/base_url` |
+| HA base URL | Workspace file | `~/.ironclaw/workspace/ha/base_url` |
 
 ### Changing the base URL
 
 ```bash
-echo 'https://new-address.duckdns.org' > "$(ironclaw workspace path)/ha/base_url"
+echo 'https://new-address.duckdns.org' > "~/.ironclaw/workspace/ha/base_url"
 ```
 
 ### Changing the token
@@ -378,7 +378,7 @@ The install script is idempotent — it can be run again to update the tool and 
 **`Home Assistant base URL not configured`**
 The workspace file is missing. Write it:
 ```bash
-echo 'http://homeassistant.local:8123' > "$(ironclaw workspace path)/ha/base_url"
+echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
 ```
 
 **`Home Assistant token not found`**

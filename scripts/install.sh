@@ -40,21 +40,22 @@ echo ""
 printf "==> Enter your Home Assistant base URL (e.g. http://homeassistant.local:8123): "
 read -r HA_URL
 
+WORKSPACE_PATH="${HOME}/.ironclaw/workspace"
+
 if [ -z "$HA_URL" ]; then
     echo "WARNING: No URL entered. You must write it manually before using the tool:"
-    echo "  echo 'http://homeassistant.local:8123' > \"\$(ironclaw workspace path)/ha/base_url\""
+    echo "  mkdir -p \"${WORKSPACE_PATH}/ha\" && echo 'http://homeassistant.local:8123' > \"${WORKSPACE_PATH}/ha/base_url\""
 else
     case "$HA_URL" in
         http://*|https://*)
-            WORKSPACE_PATH="$(ironclaw workspace path)"
-            mkdir -p "$WORKSPACE_PATH/ha"
-            printf '%s' "${HA_URL%/}" > "$WORKSPACE_PATH/ha/base_url"
-            echo "  Wrote HA base URL to: $WORKSPACE_PATH/ha/base_url"
+            mkdir -p "${WORKSPACE_PATH}/ha"
+            printf '%s' "${HA_URL%/}" > "${WORKSPACE_PATH}/ha/base_url"
+            echo "  Wrote HA base URL to: ${WORKSPACE_PATH}/ha/base_url"
             ;;
         *)
             echo "ERROR: URL must start with http:// or https:// (got: $HA_URL)"
             echo "  Re-run install.sh or write manually:"
-            echo "  echo 'http://homeassistant.local:8123' > \"\$(ironclaw workspace path)/ha/base_url\""
+            echo "  mkdir -p \"${WORKSPACE_PATH}/ha\" && echo 'http://homeassistant.local:8123' > \"${WORKSPACE_PATH}/ha/base_url\""
             exit 1
             ;;
     esac

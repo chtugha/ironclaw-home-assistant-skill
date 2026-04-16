@@ -59,12 +59,12 @@ Before using, run the install script (or configure manually):
 ```
 This will:
 1. Store **ha_token** — Long-lived access token from HA profile page (`/profile` → Long-Lived Access Tokens)
-2. Write the **HA base URL** to the workspace file (`$(ironclaw workspace path)/ha/base_url`)
+2. Write the **HA base URL** to the workspace file (`~/.ironclaw/workspace/ha/base_url`)
 
 To configure manually:
 ```bash
 ironclaw tool setup ha-tool   # stores ha_token secret
-echo 'http://homeassistant.local:8123' > "$(ironclaw workspace path)/ha/base_url"
+echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
 ```
 
 > **Note**: The base URL is stored as a workspace file (not a secret) because WASM tools cannot read secret values — only check their existence. The token is injected automatically by the IronClaw host at the HTTP boundary. CLI and MCP dispatch modes are not available inside WASM sandboxes; all Home Assistant control is performed via the REST API, which covers 100% of HA's functionality.

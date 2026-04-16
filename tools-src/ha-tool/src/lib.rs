@@ -23,7 +23,7 @@
 //! ironclaw host. You never need to handle it in code.
 //! The `ha_base_url` is read from workspace file `ha/base_url`. To populate
 //! this file, create it manually: echo "http://homeassistant.local:8123" > \
-//! $(ironclaw workspace path)/ha/base_url
+//! ~/.ironclaw/workspace/ha/base_url
 
 wit_bindgen::generate!({
     world: "sandboxed-tool",
@@ -129,7 +129,7 @@ fn resolve_base_url() -> Result<String, String> {
                 Err(
                     "ha/base_url workspace file is empty. Write your HA URL: \
                      echo 'http://homeassistant.local:8123' > \
-                     \"$(ironclaw workspace path)/ha/base_url\""
+                     \"~/.ironclaw/workspace/ha/base_url\""
                         .into(),
                 )
             } else {
@@ -142,7 +142,7 @@ fn resolve_base_url() -> Result<String, String> {
         }
         None => Err(
             "Home Assistant base URL not configured. Write it to the workspace file: \
-             echo 'http://homeassistant.local:8123' > \"$(ironclaw workspace path)/ha/base_url\""
+             echo 'http://homeassistant.local:8123' > \"~/.ironclaw/workspace/ha/base_url\""
                 .into(),
         ),
     }
@@ -897,7 +897,7 @@ impl exports::near::agent::tool::Guest for HaTool {
          control Modbus devices, render Jinja2 templates, view logs, check config, and restart HA. \
          Requires ha_token (set via `ironclaw tool setup ha-tool`) and ha_base_url \
          (written to the workspace file by `install.sh`, or manually: \
-         echo 'http://homeassistant.local:8123' > \"$(ironclaw workspace path)/ha/base_url\")."
+         echo 'http://homeassistant.local:8123' > \"~/.ironclaw/workspace/ha/base_url\")."
             .to_string()
     }
 }
