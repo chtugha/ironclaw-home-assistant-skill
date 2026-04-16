@@ -1,87 +1,71 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "wit_version": "0.3.0",
-  "description": "Full Home Assistant control via REST API. Manage entities, call services, control automations/scripts/scenes, publish MQTT, read/write Modbus registers, render templates, inspect logs, and restart HA — all through the Home Assistant REST API with a long-lived access token. Requires ha_token secret (set via `ironclaw tool setup ha-tool`) and the HA base URL written to the workspace file at ha/base_url.",
+  "description": "Control Home Assistant: read/write entity states, call services, manage automations/scripts/scenes, publish MQTT, control Modbus, render templates, view history/logbook, and manage the HA system. Every call requires ha_url (the base URL of the HA instance).",
   "discovery_summary": {
-    "always_required": ["action"],
+    "always_required": ["action", "ha_url"],
     "conditional_requirements": [
-      "All actions require ha_token (secret) and ha_base_url (workspace file at ha/base_url). Run install.sh to configure both.",
-      "get_state requires entity_id.",
-      "set_state requires entity_id and state.",
-      "call_service requires domain and service; data is optional.",
-      "fire_event requires event_type; event_data is optional.",
-      "render_template requires template.",
-      "mqtt_publish requires topic and payload.",
-      "modbus_write requires unit, address, and value.",
-      "get_history requires entity_id; hours_back (default 24) or start_time (ISO 8601) is optional.",
-      "get_logbook accepts optional entity_id and hours_back."
+      "get_state requires entity_id",
+      "set_state requires entity_id and state",
+      "call_service requires domain and service; data is optional JSON object",
+      "fire_event requires event_type; event_data is optional",
+      "render_template requires template (Jinja2)",
+      "get_history requires entity_id; hours_back defaults to 24",
+      "get_logbook accepts optional entity_id and hours_back",
+      "get_calendar_events requires entity_id, start, and end (ISO 8601)",
+      "toggle_automation requires entity_id; enabled defaults to true",
+      "run_script requires entity_id",
+      "activate_scene requires entity_id",
+      "mqtt_publish requires topic and payload",
+      "modbus_write requires unit, address, value, and write_type (coil or holding); hub is optional for multi-hub setups"
     ],
     "notes": [
-      "Use get_states to discover all entity IDs before targeting specific entities.",
-      "Use get_services to discover available service domains and service names.",
-      "MQTT is controlled via call_service with domain=mqtt, service=publish.",
-      "Modbus devices are controlled via call_service with domain=modbus.",
-      "Automations can be listed via get_states (domain filter: automation) and triggered via call_service(automation, trigger).",
-      "Scripts: list via get_states(domain=script), run via call_service(script, <script_id>).",
-      "Scenes: list via get_states(domain=scene), activate via call_service(scene, turn_on).",
-      "restart_ha will restart the Home Assistant instance — use with caution."
+      "ha_url is required on every call — ask the user for their Home Assistant URL if unknown.",
+      "Use get_states with domain_filter to discover entity IDs.",
+      "Use get_services to discover available service domains and names.",
+      "MQTT: use mqtt_publish or call_service(mqtt, publish).",
+      "Modbus: use modbus_write or call_service(modbus, write_register/write_coil).",
+      "restart_ha restarts the Home Assistant instance — use with caution."
     ],
     "examples": [
-      {"action": "get_states"},
-      {"action": "get_states", "domain_filter": "light"},
-      {"action": "get_state", "entity_id": "light.living_room"},
-      {"action": "call_service", "domain": "light", "service": "turn_on", "data": {"entity_id": "light.living_room", "brightness": 200}},
-      {"action": "call_service", "domain": "mqtt", "service": "publish", "data": {"topic": "home/sensor/temp", "payload": "22.5"}},
-      {"action": "mqtt_publish", "topic": "home/sensor/temp", "payload": "22.5"},
-      {"action": "render_template", "template": "{{ states('sensor.temperature') }} °C"},
-      {"action": "get_history", "entity_id": "sensor.temperature", "hours_back": 24}
+      {"action": "get_states", "ha_url": "http://homeassistant.local:8123"},
+      {"action": "get_states", "ha_url": "http://homeassistant.local:8123", "domain_filter": "light"},
+      {"action": "get_state", "ha_url": "http://homeassistant.local:8123", "entity_id": "light.living_room"},
+      {"action": "call_service", "ha_url": "http://homeassistant.local:8123", "domain": "light", "service": "turn_on", "data": {"entity_id": "light.living_room", "brightness": 200}},
+      {"action": "mqtt_publish", "ha_url": "http://homeassistant.local:8123", "topic": "home/sensor/temp", "payload": "22.5"},
+      {"action": "render_template", "ha_url": "http://homeassistant.local:8123", "template": "{{ states('sensor.temperature') }}"}
     ]
   },
-  "capabilities": {
-    "http": {
-      "allowlist": [
-        {
-          "host": "*",
-          "path_prefix": "/",
-          "methods": ["GET", "POST", "PUT", "DELETE"]
-        }
-      ],
-      "credentials": {
-        "ha_token": {
-          "secret_name": "ha_token",
-          "location": {
-            "type": "bearer"
-          },
-          "host_patterns": ["*"]
-        }
-      },
-      "rate_limit": {
-        "requests_per_minute": 120,
-        "requests_per_hour": 3600
-      },
-      "timeout_secs": 30
+  "http": {
+    "allowlist": [
+      {
+        "host": "*",
+        "path_prefix": "/api/",
+        "methods": ["GET", "POST", "PUT", "DELETE"]
+      }
+    ],
+    "credentials": {
+      "ha_token": {
+        "secret_name": "ha_token",
+        "location": { "type": "bearer" },
+        "host_patterns": ["*"]
+      }
     },
-    "secrets": {
-      "allowed_names": ["ha_token"]
+    "rate_limit": {
+      "requests_per_minute": 120,
+      "requests_per_hour": 3600
     },
-    "workspace": {
-      "allowed_prefixes": ["ha/"]
-    }
+    "timeout_secs": 30
+  },
+  "secrets": {
+    "allowed_names": ["ha_token"]
   },
   "auth": {
     "secret_name": "ha_token",
     "display_name": "Home Assistant",
-    "instructions": "Create a long-lived access token in Home Assistant: go to your profile page (http://your-ha-url:8123/profile), scroll to 'Long-Lived Access Tokens', and create a new token.",
+    "instructions": "Create a long-lived access token in Home Assistant:\n1. Open your HA instance in a browser\n2. Go to your Profile page (click your name in the sidebar)\n3. Scroll to 'Long-Lived Access Tokens'\n4. Click 'Create Token', give it a name, and copy the token",
     "setup_url": "http://homeassistant.local:8123/profile",
-    "token_hint": "Long-lived access token from HA profile page",
+    "token_hint": "Long-lived access token (starts with 'ey')",
     "env_var": "HA_TOKEN"
-  },
-  "setup": {
-    "required_secrets": [
-      {
-        "name": "ha_token",
-        "prompt": "Home Assistant long-lived access token (from your HA profile page)"
-      }
-    ]
   }
 }

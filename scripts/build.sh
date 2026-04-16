@@ -3,12 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-TOOL_DIR="$ROOT_DIR/tools-src/ha-tool"
+TOOL_SRC="$ROOT_DIR/tools-src/ha-tool"
 OUT_DIR="$ROOT_DIR/dist"
-
-TARGET="wasm32-wasip2"
-CRATE="ha_tool"
-BINARY="$CRATE.wasm"
 
 echo "==> Checking Rust toolchain..."
 if ! command -v cargo &>/dev/null; then
@@ -16,25 +12,15 @@ if ! command -v cargo &>/dev/null; then
     exit 1
 fi
 
-echo "==> Adding WASM target ($TARGET)..."
-rustup target add "$TARGET" 2>/dev/null || true
+echo "==> Adding WASM target (wasm32-wasip2)..."
+rustup target add wasm32-wasip2 2>/dev/null || true
 
-echo "==> Building $CRATE (release, $TARGET)..."
-cd "$TOOL_DIR"
-cargo build --release --target "$TARGET"
+echo "==> Building ha-tool (release, wasm32-wasip2)..."
+cargo build --manifest-path "$TOOL_SRC/Cargo.toml" --target wasm32-wasip2 --release
 
 mkdir -p "$OUT_DIR"
+cp "$TOOL_SRC/target/wasm32-wasip2/release/ha_tool.wasm" "$OUT_DIR/ha_tool.wasm"
 
-WASM_SRC="$TOOL_DIR/target/$TARGET/release/$BINARY"
-if [ ! -f "$WASM_SRC" ]; then
-    echo "ERROR: Expected WASM output not found: $WASM_SRC"
-    exit 1
-fi
-
-cp "$WASM_SRC" "$OUT_DIR/$BINARY"
-
+SIZE=$(wc -c < "$OUT_DIR/ha_tool.wasm" | tr -d ' ')
 echo ""
-echo "✓ Built: $OUT_DIR/$BINARY"
-echo "  Size: $(du -sh "$OUT_DIR/$BINARY" | cut -f1)"
-echo ""
-echo "Run './scripts/install.sh' to install into ironclaw."
+echo "Built: $OUT_DIR/ha_tool.wasm ($SIZE bytes)"

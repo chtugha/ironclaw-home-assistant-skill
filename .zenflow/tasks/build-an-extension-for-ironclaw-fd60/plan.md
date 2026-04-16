@@ -4,53 +4,37 @@
 - **Artifacts Path**: `.zenflow/tasks/build-an-extension-for-ironclaw-fd60`
 
 ### [x] Step 1: Research & Architecture
-- Studied IronClaw WASM tool system (WIT interface, capabilities.json, secrets model)
-- Studied Home Assistant REST API surface
-- Designed single-tool architecture with wildcard HTTP allowlist + two secrets (ha_token, ha_base_url)
+- Exhaustive study of IronClaw internals: WIT interface, capabilities schema, credential injection, workspace_read, UrlPath, registry, loader
+- Confirmed: workspace_read returns None for standalone tools (no reader injected)
+- Confirmed: UrlPath credential injection does not work for standalone tools (credentials HashMap never populated)
+- Architecture decision: ha_url is a required parameter on every call (only reliable approach)
+- Bearer token (ha_token) auto-injected by host via credentials config
 
-### [x] Step 2: Core infrastructure
-- `wit/tool.wit` — WIT interface (near:agent@0.3.0 package)
-- `.gitignore`
-- `tools-src/ha-tool/Cargo.toml`
+### [x] Step 2: Complete Rebuild from Scratch
+- Deleted all previous code and rebuilt following Slack tool pattern exactly
+- `wit/tool.wit` — canonical copy from ironclaw upstream
+- `tools-src/ha-tool/Cargo.toml` — wit-bindgen =0.36, schemars 1 (matching upstream)
+- `tools-src/ha-tool/ha-tool.capabilities.json` — auth section, bearer injection, host_patterns, rate limits
+- `tools-src/ha-tool/src/types.rs` — HaAction tagged enum with schemars::JsonSchema derive
+- `tools-src/ha-tool/src/api.rs` — all REST API functions with input validation
+- `tools-src/ha-tool/src/lib.rs` — tool interface (execute, schema, description)
+- `skills/SKILL.md` — skill with activation keywords/patterns, LLM instructions for ha_url
+- `scripts/build.sh` — WASM build script
+- `scripts/install.sh` — ironclaw tool install from source dir + skill copy + tool auth
 
-### [x] Step 3: Capabilities manifest
-- `tools-src/ha-tool/ha-tool.capabilities.json`
-- Bearer token injection, workspace read, setup flow, wildcard allowlist
+### [x] Step 3: Build verification and final testing
+- WASM builds cleanly to wasm32-wasip2 with zero warnings
+- 7 unit tests pass (url_encode, entity_id, domain, service, iso_prefix, normalize_url, days_to_ymd)
+- install.sh uses `ironclaw tool install <source-dir>` (auto-builds from Cargo.toml)
+- Skill copied to ~/.ironclaw/skills/home-assistant/SKILL.md
+- Auth configured via `ironclaw tool auth ha-tool`
 
-### [x] Step 4: WASM tool implementation
-- `tools-src/ha-tool/src/lib.rs`
-- 30 actions covering: entity states, services, automations, scripts, scenes,
-  MQTT publish, Modbus read/write, templates, history, logbook, error log,
-  config check, restart, notifications, calendars, reload config entry
-- Input validation, URL encoding, ISO 8601 date formatting (no_std-compatible)
-- JSON Schema exported via `schema()` function
-- 16 unit tests (all passing)
-- Compiles cleanly to wasm32-wasip2
-
-### [x] Step 5: Skill file & build scripts
-- `skills/home-assistant.md` — comprehensive agent skill with usage patterns
-- `scripts/build.sh` — builds WASM to dist/
-- `scripts/install.sh` — installs tool + skill into ironclaw, prints setup instructions
-
-### [x] Step 6: Code review bug fix pass
-- #1: Fixed misleading resolve_base_url comment (ha_base_url is workspace file, not secret)
-- #2: Removed base_url from LLM-facing JSON schema; added _security_note to capabilities.json
-- #4: Fixed get_notifications — was querying /api/states, now correctly calls /api/persistent_notification
-- #5: Fixed reload_config_entry — replaced non-existent REST endpoint with call_service(homeassistant, reload_config_entry)
-- #6: Added MAX_STATES=500 truncation to get_states with _truncated/_hint response fields
-- #7: Removed dead ha_delete function
-- #8: Added start_time: Option<String> to GetHistory; overrides hours_back when provided
-- #9: validate_service now allows hyphen (-) characters for third-party service names
-- #10: WIT verified verbatim against ironclaw repo (near:agent@0.3.0)
-- All 16 tests pass; WASM builds cleanly to wasm32-wasip2
-
-### [x] Step 7: Deep audit against upstream IronClaw source
-- Cloned upstream ironclaw repo and compared WIT, capabilities schema, CLI syntax
-- Fixed workspace schema: `{"read": true}` → `{"allowed_prefixes": ["ha/"]}` (matches WorkspaceCapabilitySchema)
-- Fixed run_script: variables were nested under `"variables"` key; HA expects top-level service data. Now merges vars as top-level keys with type validation
-- Fixed toggle_automation JSON schema: `enabled` removed from `required` to match `Option<bool>` in Rust
-- Fixed README: corrected `ironclaw tool install` syntax (positional path, not `--wasm`), replaced `ironclaw skill install` with file copy, fixed tilde-in-double-quotes (`"~/"` → `"$HOME/"`) in all bash examples
-- Removed spurious `config` field from capabilities.json (not in IronClaw's CapabilitiesFile schema)
-- Fixed description() string to remove tilde-in-quotes
-- Fixed skill file manual setup command (same tilde issue)
-- All 16 tests pass; WASM builds cleanly to wasm32-wasip2
+### [x] Step 4: Review fixes — security and correctness
+- SSRF fix: validate_ha_url restricts to private/local addresses (localhost, 192.168.*, 10.*, 172.16-31.*, *.local, *.internal, *.lan, *.home, *.duckdns.org, *.nabu.casa)
+- get_notifications: uses /api/persistent_notification (correct HA endpoint)
+- hours_back bounds: validated 1-8760 in get_history and get_logbook
+- Domain prefix validation: toggle_automation, trigger_automation require automation.*, run_script requires script.*, activate_scene requires scene.*
+- MQTT QoS: validated 0-2
+- Empty body fix: call_service, fire_event, check_config, restart_ha all send {} when no body
+- Modbus hub: restored optional hub parameter for multi-hub setups
+- 8 unit tests pass including new validate_ha_url test

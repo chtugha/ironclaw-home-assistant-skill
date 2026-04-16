@@ -1,0 +1,124 @@
+---
+name: home-assistant
+version: 0.2.0
+description: Control Home Assistant — lights, climate, switches, automations, scripts, scenes, MQTT, Modbus, and system management via ha-tool
+activation:
+  keywords:
+    - home assistant
+    - homeassistant
+    - light
+    - lights
+    - switch
+    - thermostat
+    - climate
+    - temperature
+    - automation
+    - scene
+    - script
+    - sensor
+    - smart home
+    - mqtt
+    - modbus
+    - cover
+    - blind
+    - lock
+    - fan
+    - alarm
+    - media player
+    - notify
+    - notification
+    - entity
+  patterns:
+    - "turn (on|off|toggle).*(light|switch|fan|plug|outlet)"
+    - "(run|trigger|enable|disable).*automation"
+    - "(publish|send).*mqtt"
+    - "modbus.*(read|write)"
+    - "(activate|set).*scene"
+  tags:
+    - home-automation
+    - iot
+    - smarthome
+  max_context_tokens: 3000
+---
+
+# Home Assistant Control
+
+You have access to `ha-tool` which controls the user's Home Assistant instance via its REST API.
+
+## Important: ha_url Parameter
+
+Every ha-tool call requires `ha_url` — the base URL of the user's HA instance (e.g., `http://homeassistant.local:8123`).
+
+- Ask the user for their HA URL if you don't know it yet.
+- Once known, include `ha_url` in every ha-tool call for the rest of the conversation.
+- Common formats: `http://homeassistant.local:8123`, `http://192.168.x.x:8123`, `https://ha.example.com`
+
+## Available Actions
+
+### Discovery
+- `get_status` — Check if HA is reachable
+- `get_config` — Get HA configuration (version, location, units)
+- `get_states` — List all entities (use `domain_filter` to narrow: `light`, `switch`, `sensor`, `climate`, etc.)
+- `get_services` — List all available service domains and their services
+
+### Entity Control
+- `get_state` — Get current state of a specific entity
+- `set_state` — Set entity state directly (with optional attributes)
+- `call_service` — Call any HA service (most flexible action)
+
+### Automations
+- `list_automations` — List all automations
+- `toggle_automation` — Enable/disable an automation
+- `trigger_automation` — Trigger an automation manually
+
+### Scripts & Scenes
+- `list_scripts` / `run_script` — List and run scripts (with optional variables)
+- `list_scenes` / `activate_scene` — List and activate scenes
+
+### MQTT
+- `mqtt_publish` — Publish a message to an MQTT topic (with optional qos, retain)
+
+### Modbus
+- `modbus_write` — Write to Modbus coils (boolean) or holding registers (number)
+
+### Templates
+- `render_template` — Render a Jinja2 template on the HA server
+
+### History & Logs
+- `get_history` — Entity state history (default 24h, or pass `start_time` in ISO 8601)
+- `get_logbook` — Event logbook (optional entity filter)
+- `get_calendar_events` — Calendar events (requires `start` and `end` in ISO 8601)
+
+### Events
+- `fire_event` — Fire a custom event on the HA event bus
+
+### Notifications
+- `get_notifications` — List persistent notifications
+- `dismiss_notification` — Dismiss a notification by ID
+
+### System
+- `check_config` — Validate HA configuration
+- `get_error_log` — View the HA error log
+- `restart_ha` — Restart Home Assistant (use with caution!)
+
+## Workflow Tips
+
+1. **Start with discovery**: Use `get_states` with domain_filter to find entity IDs before operating on them.
+2. **Use call_service for anything**: Any HA service can be called directly — lights, climate, media, covers, locks, etc.
+3. **MQTT and Modbus**: These use HA's integration services, so HA must have the MQTT/Modbus integrations configured.
+4. **Templates**: Use `render_template` to evaluate complex conditions or calculations on the HA server.
+5. **Automations**: List them first, then enable/disable/trigger as needed. To edit automation YAML, you'll need file access to HA's config directory.
+
+## Example Calls
+
+```json
+{"action": "get_states", "ha_url": "http://homeassistant.local:8123", "domain_filter": "light"}
+```
+
+```json
+{"action": "call_service", "ha_url": "http://homeassistant.local:8123", "domain": "light", "service": "turn_on", "data": {"entity_id": "light.living_room", "brightness": 200}}
+```
+
+```json
+{"action": "mqtt_publish", "ha_url": "http://homeassistant.local:8123", "topic": "home/command", "payload": "restart"}
+```
