@@ -25,9 +25,11 @@ fn validate_ha_url(ha_url: &str) -> Result<(), String> {
     if !lower.starts_with("http://") && !lower.starts_with("https://") {
         return Err("ha_url must start with http:// or https://".into());
     }
-    let host_part = lower
-        .trim_start_matches("http://")
-        .trim_start_matches("https://");
+    let host_part = if let Some(s) = lower.strip_prefix("http://") {
+        s
+    } else {
+        lower.strip_prefix("https://").unwrap_or("")
+    };
     let host = host_part.split('/').next().unwrap_or("");
     let host_no_port = host.split(':').next().unwrap_or("");
     if host_no_port.is_empty() {
@@ -35,13 +37,13 @@ fn validate_ha_url(ha_url: &str) -> Result<(), String> {
     }
     let is_private = host_no_port == "localhost"
         || host_no_port == "127.0.0.1"
-        || host_no_port.starts_with("192.168.")
-        || host_no_port.starts_with("10.")
+        || is_private_ip(host_no_port, "192.168.")
+        || is_private_ip(host_no_port, "10.")
+        || is_private_172(host_no_port)
         || host_no_port.ends_with(".local")
         || host_no_port.ends_with(".internal")
         || host_no_port.ends_with(".lan")
         || host_no_port.ends_with(".home")
-        || is_172_private(host_no_port)
         || host_no_port.ends_with(".duckdns.org")
         || host_no_port.ends_with(".nabu.casa");
     if !is_private {
@@ -55,8 +57,19 @@ fn validate_ha_url(ha_url: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn is_172_private(host: &str) -> bool {
+fn is_ip_only(s: &str) -> bool {
+    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit() || b == b'.')
+}
+
+fn is_private_ip(host: &str, prefix: &str) -> bool {
+    host.starts_with(prefix) && is_ip_only(host)
+}
+
+fn is_private_172(host: &str) -> bool {
     if let Some(rest) = host.strip_prefix("172.") {
+        if !is_ip_only(host) {
+            return false;
+        }
         if let Some(second) = rest.split('.').next() {
             if let Ok(n) = second.parse::<u8>() {
                 return (16..=31).contains(&n);
@@ -479,6 +492,10 @@ mod tests {
         assert!(validate_ha_url("http://evil.example.org").is_err());
         assert!(validate_ha_url("ftp://192.168.1.1").is_err());
         assert!(validate_ha_url("not-a-url").is_err());
+        assert!(validate_ha_url("http://192.168.1.1.evil.com").is_err());
+        assert!(validate_ha_url("http://10.0.0.1.attacker.com").is_err());
+        assert!(validate_ha_url("http://172.16.0.1.evil.com").is_err());
+        assert!(validate_ha_url("https://https://foo.local").is_err());
     }
 
     #[test]

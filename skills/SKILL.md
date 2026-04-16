@@ -95,6 +95,7 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 ### Notifications
 - `get_notifications` — List persistent notifications
 - `dismiss_notification` — Dismiss a notification by ID
+- To **send** a notification, use `call_service` with domain `notify` and the target service (e.g., `mobile_app_my_phone`)
 
 ### System
 - `check_config` — Validate HA configuration
@@ -121,4 +122,8 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 
 ```json
 {"action": "mqtt_publish", "ha_url": "http://homeassistant.local:8123", "topic": "home/command", "payload": "restart"}
+```
+
+```json
+{"action": "call_service", "ha_url": "http://homeassistant.local:8123", "domain": "notify", "service": "mobile_app_my_phone", "data": {"message": "Hello from IronClaw"}}
 ```
