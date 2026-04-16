@@ -58,7 +58,14 @@ fn validate_ha_url(ha_url: &str) -> Result<(), String> {
 }
 
 fn is_ip_only(s: &str) -> bool {
-    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit() || b == b'.')
+    if s.is_empty() || s.starts_with('.') || s.ends_with('.') || s.contains("..") {
+        return false;
+    }
+    let parts: Vec<&str> = s.split('.').collect();
+    if parts.len() != 4 {
+        return false;
+    }
+    parts.iter().all(|p| !p.is_empty() && p.len() <= 3 && p.bytes().all(|b| b.is_ascii_digit()))
 }
 
 fn is_private_ip(host: &str, prefix: &str) -> bool {
@@ -496,6 +503,23 @@ mod tests {
         assert!(validate_ha_url("http://10.0.0.1.attacker.com").is_err());
         assert!(validate_ha_url("http://172.16.0.1.evil.com").is_err());
         assert!(validate_ha_url("https://https://foo.local").is_err());
+    }
+
+    #[test]
+    fn test_is_ip_only() {
+        assert!(is_ip_only("192.168.1.1"));
+        assert!(is_ip_only("10.0.0.1"));
+        assert!(is_ip_only("172.16.0.1"));
+        assert!(is_ip_only("255.255.255.255"));
+        assert!(!is_ip_only(""));
+        assert!(!is_ip_only("."));
+        assert!(!is_ip_only("..."));
+        assert!(!is_ip_only("192.168."));
+        assert!(!is_ip_only("192.168.1"));
+        assert!(!is_ip_only("192.168.1.1.1"));
+        assert!(!is_ip_only("192.168.1.1.evil.com"));
+        assert!(!is_ip_only("abc.def.ghi.jkl"));
+        assert!(!is_ip_only("192..168.1"));
     }
 
     #[test]

@@ -30,6 +30,7 @@
 - Auth configured via `ironclaw tool auth ha-tool`
 
 ### [x] Step 4: Review fixes — security and correctness
+<!-- capabilities.json structure verified: top-level http/secrets matches upstream Slack tool (slack-tool.capabilities.json) -->
 - SSRF fix: validate_ha_url restricts to private/local addresses (localhost, 192.168.*, 10.*, 172.16-31.*, *.local, *.internal, *.lan, *.home, *.duckdns.org, *.nabu.casa)
 - get_notifications: uses /api/persistent_notification (correct HA endpoint)
 - hours_back bounds: validated 1-8760 in get_history and get_logbook
@@ -38,3 +39,8 @@
 - Empty body fix: call_service, fire_event, check_config, restart_ha all send {} when no body
 - Modbus hub: restored optional hub parameter for multi-hub setups
 - 8 unit tests pass including new validate_ha_url test
+
+### [x] Step 5: Final hardening
+- Tightened is_ip_only to validate exactly 4 octets of digits only (rejects degenerate inputs like ".", "192.168.", "192.168.1.1.evil.com")
+- Added is_ip_only unit test with 13 assertions covering valid IPs and degenerate/malicious inputs
+- 9 unit tests pass total
