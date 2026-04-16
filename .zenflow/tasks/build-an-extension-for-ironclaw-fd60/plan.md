@@ -43,3 +43,14 @@
 - #9: validate_service now allows hyphen (-) characters for third-party service names
 - #10: WIT verified verbatim against ironclaw repo (near:agent@0.3.0)
 - All 16 tests pass; WASM builds cleanly to wasm32-wasip2
+
+### [x] Step 7: Deep audit against upstream IronClaw source
+- Cloned upstream ironclaw repo and compared WIT, capabilities schema, CLI syntax
+- Fixed workspace schema: `{"read": true}` → `{"allowed_prefixes": ["ha/"]}` (matches WorkspaceCapabilitySchema)
+- Fixed run_script: variables were nested under `"variables"` key; HA expects top-level service data. Now merges vars as top-level keys with type validation
+- Fixed toggle_automation JSON schema: `enabled` removed from `required` to match `Option<bool>` in Rust
+- Fixed README: corrected `ironclaw tool install` syntax (positional path, not `--wasm`), replaced `ironclaw skill install` with file copy, fixed tilde-in-double-quotes (`"~/"` → `"$HOME/"`) in all bash examples
+- Removed spurious `config` field from capabilities.json (not in IronClaw's CapabilitiesFile schema)
+- Fixed description() string to remove tilde-in-quotes
+- Fixed skill file manual setup command (same tilde issue)
+- All 16 tests pass; WASM builds cleanly to wasm32-wasip2

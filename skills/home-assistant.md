@@ -64,7 +64,8 @@ This will:
 To configure manually:
 ```bash
 ironclaw tool setup ha-tool   # stores ha_token secret
-echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
+mkdir -p "$HOME/.ironclaw/workspace/ha"
+echo 'http://homeassistant.local:8123' > "$HOME/.ironclaw/workspace/ha/base_url"
 ```
 
 > **Note**: The base URL is stored as a workspace file (not a secret) because WASM tools cannot read secret values — only check their existence. The token is injected automatically by the IronClaw host at the HTTP boundary. CLI and MCP dispatch modes are not available inside WASM sandboxes; all Home Assistant control is performed via the REST API, which covers 100% of HA's functionality.

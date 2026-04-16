@@ -65,8 +65,8 @@ Run the single install script. It builds the WASM binary, registers the tool and
 The script does the following automatically:
 
 1. **Builds** `tools-src/ha-tool` as a `wasm32-wasip2` WASM component → `dist/ha_tool.wasm`
-2. **Installs** the tool into IronClaw: `ironclaw tool install --name ha-tool --wasm dist/ha_tool.wasm --capabilities …`
-3. **Installs** the agent skill: `ironclaw skill install --name home-assistant --file skills/home-assistant.md`
+2. **Installs** the tool into IronClaw: `ironclaw tool install dist/ha_tool.wasm --name ha-tool --capabilities …`
+3. **Installs** the agent skill by copying it to `~/.ironclaw/skills/home-assistant/SKILL.md`
 4. **Runs** `ironclaw tool setup ha-tool` — you will be prompted to enter your HA long-lived access token
 5. **Prompts** for your HA base URL and writes it to `~/.ironclaw/workspace/ha/base_url`
 
@@ -103,18 +103,16 @@ Output: `dist/ha_tool.wasm`
 ### Install the tool
 
 ```bash
-ironclaw tool install \
+ironclaw tool install dist/ha_tool.wasm \
     --name ha-tool \
-    --wasm dist/ha_tool.wasm \
     --capabilities tools-src/ha-tool/ha-tool.capabilities.json
 ```
 
 ### Install the skill
 
 ```bash
-ironclaw skill install \
-    --name home-assistant \
-    --file skills/home-assistant.md
+mkdir -p ~/.ironclaw/skills/home-assistant
+cp skills/home-assistant.md ~/.ironclaw/skills/home-assistant/SKILL.md
 ```
 
 ### Store the access token
@@ -127,7 +125,8 @@ ironclaw tool setup ha-tool
 ### Write the base URL
 
 ```bash
-echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
+mkdir -p "$HOME/.ironclaw/workspace/ha"
+echo 'http://homeassistant.local:8123' > "$HOME/.ironclaw/workspace/ha/base_url"
 ```
 
 Replace `http://homeassistant.local:8123` with your actual HA address. This can be:
@@ -155,7 +154,7 @@ Because of this, the HA base URL cannot be stored as a secret either — it is i
 ### Changing the base URL
 
 ```bash
-echo 'https://new-address.duckdns.org' > "~/.ironclaw/workspace/ha/base_url"
+echo 'https://new-address.duckdns.org' > "$HOME/.ironclaw/workspace/ha/base_url"
 ```
 
 ### Changing the token
@@ -243,7 +242,7 @@ When capped at 500: `"_truncated": true` and `"_hint"` are added.
 |---|---|---|
 | `list_automations` | — | — |
 | `trigger_automation` | `entity_id` | — |
-| `toggle_automation` | `entity_id`, `enabled` | — |
+| `toggle_automation` | `entity_id` | `enabled` (default: true) |
 
 ### Scripts
 
@@ -378,7 +377,8 @@ The install script is idempotent — it can be run again to update the tool and 
 **`Home Assistant base URL not configured`**
 The workspace file is missing. Write it:
 ```bash
-echo 'http://homeassistant.local:8123' > "~/.ironclaw/workspace/ha/base_url"
+mkdir -p "$HOME/.ironclaw/workspace/ha"
+echo 'http://homeassistant.local:8123' > "$HOME/.ironclaw/workspace/ha/base_url"
 ```
 
 **`Home Assistant token not found`**

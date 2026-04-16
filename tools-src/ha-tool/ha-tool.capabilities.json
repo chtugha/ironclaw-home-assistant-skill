@@ -65,7 +65,7 @@
       "allowed_names": ["ha_token"]
     },
     "workspace": {
-      "read": true
+      "allowed_prefixes": ["ha/"]
     }
   },
   "auth": {
@@ -83,9 +83,5 @@
         "prompt": "Home Assistant long-lived access token (from your HA profile page)"
       }
     ]
-  },
-  "config": {
-    "default_history_hours": 24,
-    "max_states_per_response": 500
   }
 }

@@ -741,11 +741,12 @@ fn run_script(
         ));
     }
     let script_name = entity_id.strip_prefix("script.").unwrap_or(entity_id);
-    let mut data = serde_json::json!({});
-    if let Some(vars) = variables {
-        data["variables"] = vars.clone();
-    }
-    call_service(base_url, "script", script_name, Some(&data))
+    let data = match variables {
+        Some(vars) if vars.is_object() => Some(vars.clone()),
+        Some(_) => return Err("variables must be a JSON object".to_string()),
+        None => None,
+    };
+    call_service(base_url, "script", script_name, data.as_ref())
 }
 
 fn list_scenes(base_url: &str) -> Result<String, String> {
@@ -896,8 +897,7 @@ impl exports::near::agent::tool::Guest for HaTool {
          locks, covers, fans, etc.), manage automations, scripts, and scenes, publish MQTT messages, \
          control Modbus devices, render Jinja2 templates, view logs, check config, and restart HA. \
          Requires ha_token (set via `ironclaw tool setup ha-tool`) and ha_base_url \
-         (written to the workspace file by `install.sh`, or manually: \
-         echo 'http://homeassistant.local:8123' > \"~/.ironclaw/workspace/ha/base_url\")."
+         (written to the workspace file at ha/base_url by `install.sh`)."
             .to_string()
     }
 }
@@ -1112,9 +1112,9 @@ const SCHEMA: &str = r#"{
       "properties": {
         "action": { "type": "string", "const": "toggle_automation" },
         "entity_id": { "type": "string", "description": "Automation entity ID (must start with 'automation.')." },
-        "enabled": { "type": "boolean", "description": "true to enable, false to disable." }
+        "enabled": { "type": "boolean", "description": "true to enable, false to disable. Defaults to true if omitted." }
       },
-      "required": ["action", "entity_id", "enabled"]
+      "required": ["action", "entity_id"]
     },
     {
       "description": "List all script entities.",
