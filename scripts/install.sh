@@ -22,10 +22,9 @@ if [ ! -f "$WASM_FILE" ]; then
 fi
 
 echo "==> Installing $TOOL_NAME tool..."
-ironclaw tool install \
-    --name "$TOOL_NAME" \
-    --wasm "$WASM_FILE" \
-    --capabilities "$CAPS_FILE"
+ironclaw tool install "$WASM_FILE" \
+    --capabilities "$CAPS_FILE" \
+    --name "$TOOL_NAME"
 
 echo "==> Installing skill..."
 ironclaw skill install \
