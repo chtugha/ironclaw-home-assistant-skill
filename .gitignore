@@ -1,0 +1,9 @@
+target/
+*.wasm
+Cargo.lock
+.env
+dist/
+build/
+.cache/
+*.log
+node_modules/
