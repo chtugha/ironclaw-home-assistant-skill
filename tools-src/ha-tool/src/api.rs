@@ -2,6 +2,9 @@ use crate::near::agent::host;
 use crate::types::StatesResponse;
 
 const MAX_STATES: usize = 500;
+const MAX_HOURS_BACK: u32 = 8760;
+const MAX_ENTITY_ID_LEN: usize = 255;
+const MAX_EVENT_TYPE_LEN: usize = 255;
 
 fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -97,7 +100,7 @@ fn validate_entity_id(id: &str) -> Result<(), String> {
     if !id.contains('.') {
         return Err(format!("entity_id '{}' must contain a dot (e.g. 'light.living_room')", id));
     }
-    if id.len() > 255 {
+    if id.len() > MAX_ENTITY_ID_LEN {
         return Err("entity_id too long".into());
     }
     for c in id.chars() {
@@ -161,14 +164,16 @@ fn ha_get(base: &str, path: &str) -> Result<String, String> {
 fn ha_post(base: &str, path: &str, body: Option<&str>) -> Result<String, String> {
     validate_ha_url(base)?;
     let url = format!("{}{}", normalize_url(base), path);
-    let headers = if body.is_some() {
-        r#"{"Content-Type": "application/json"}"#
-    } else {
-        "{}"
-    };
-    let body_bytes = body.map(|b| b.as_bytes().to_vec());
+    let body_str = body.unwrap_or("{}");
+    let body_bytes = body_str.as_bytes().to_vec();
     host::log(host::LogLevel::Debug, &format!("POST {}", path));
-    let resp = host::http_request("POST", &url, headers, body_bytes.as_deref(), None)?;
+    let resp = host::http_request(
+        "POST",
+        &url,
+        r#"{"Content-Type": "application/json"}"#,
+        Some(&body_bytes),
+        None,
+    )?;
     if resp.status < 200 || resp.status >= 300 {
         return Err(format!("HA API {} returned {}: {}", path, resp.status, String::from_utf8_lossy(&resp.body)));
     }
@@ -225,6 +230,10 @@ pub fn get_state(base: &str, entity_id: &str) -> Result<String, String> {
 
 pub fn set_state(base: &str, entity_id: &str, state: &str, attributes: Option<&serde_json::Value>) -> Result<String, String> {
     validate_entity_id(entity_id)?;
+    validate_not_empty(state, "state")?;
+    if state.len() > 255 {
+        return Err("state value too long (max 255 characters)".into());
+    }
     let mut body = serde_json::json!({"state": state});
     if let Some(attrs) = attributes {
         body["attributes"] = attrs.clone();
@@ -248,10 +257,27 @@ pub fn get_services(base: &str) -> Result<String, String> {
     ha_get(base, "/api/services")
 }
 
-pub fn fire_event(base: &str, event_type: &str, event_data: Option<&serde_json::Value>) -> Result<String, String> {
-    if event_type.is_empty() || event_type.len() > 255 {
-        return Err("event_type must be 1-255 characters".into());
+fn validate_event_type(s: &str) -> Result<(), String> {
+    if s.is_empty() || s.len() > MAX_EVENT_TYPE_LEN {
+        return Err(format!("event_type must be 1-{} characters", MAX_EVENT_TYPE_LEN));
     }
+    for c in s.chars() {
+        if !c.is_alphanumeric() && c != '_' && c != '.' {
+            return Err(format!("event_type contains invalid character '{}'", c));
+        }
+    }
+    Ok(())
+}
+
+fn validate_not_empty(value: &str, field: &str) -> Result<(), String> {
+    if value.is_empty() {
+        return Err(format!("{} must not be empty", field));
+    }
+    Ok(())
+}
+
+pub fn fire_event(base: &str, event_type: &str, event_data: Option<&serde_json::Value>) -> Result<String, String> {
+    validate_event_type(event_type)?;
     let path = format!("/api/events/{}", url_encode(event_type));
     let body_str = match event_data {
         Some(d) => serde_json::to_string(d).unwrap_or_else(|_| "{}".to_string()),
@@ -261,8 +287,9 @@ pub fn fire_event(base: &str, event_type: &str, event_data: Option<&serde_json::
 }
 
 pub fn render_template(base: &str, template: &str) -> Result<String, String> {
-    if template.is_empty() {
-        return Err("template must not be empty".into());
+    validate_not_empty(template, "template")?;
+    if template.len() > 65536 {
+        return Err("template too large (max 64KB)".into());
     }
     let body = serde_json::json!({"template": template});
     let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
@@ -271,8 +298,8 @@ pub fn render_template(base: &str, template: &str) -> Result<String, String> {
 
 pub fn get_history(base: &str, entity_id: &str, hours_back: u32, start_time: Option<&str>) -> Result<String, String> {
     validate_entity_id(entity_id)?;
-    if start_time.is_none() && (hours_back == 0 || hours_back > 8760) {
-        return Err("hours_back must be between 1 and 8760".into());
+    if start_time.is_none() && (hours_back == 0 || hours_back > MAX_HOURS_BACK) {
+        return Err(format!("hours_back must be between 1 and {}", MAX_HOURS_BACK));
     }
     let ts = if let Some(st) = start_time {
         validate_iso_prefix(st, "start_time")?;
@@ -297,8 +324,8 @@ pub fn get_logbook(base: &str, entity_id: Option<&str>, hours_back: u32) -> Resu
     if let Some(eid) = entity_id {
         validate_entity_id(eid)?;
     }
-    if hours_back == 0 || hours_back > 8760 {
-        return Err("hours_back must be between 1 and 8760".into());
+    if hours_back == 0 || hours_back > MAX_HOURS_BACK {
+        return Err(format!("hours_back must be between 1 and {}", MAX_HOURS_BACK));
     }
     let now_ms = host::now_millis();
     let start_ms = now_ms.saturating_sub((hours_back as u64) * 3600 * 1000);
@@ -366,8 +393,12 @@ pub fn activate_scene(base: &str, entity_id: &str) -> Result<String, String> {
 }
 
 pub fn mqtt_publish(base: &str, topic: &str, payload: &str, qos: Option<u8>, retain: Option<bool>) -> Result<String, String> {
-    if topic.is_empty() {
-        return Err("topic must not be empty".into());
+    validate_not_empty(topic, "topic")?;
+    if topic.len() > 65535 {
+        return Err("topic too long (max 65535 bytes per MQTT spec)".into());
+    }
+    if topic.contains('\0') {
+        return Err("topic must not contain null characters".into());
     }
     let mut data = serde_json::json!({"topic": topic, "payload": payload});
     if let Some(q) = qos {
@@ -409,8 +440,9 @@ pub fn get_notifications(base: &str) -> Result<String, String> {
 }
 
 pub fn dismiss_notification(base: &str, notification_id: &str) -> Result<String, String> {
-    if notification_id.is_empty() {
-        return Err("notification_id must not be empty".into());
+    validate_not_empty(notification_id, "notification_id")?;
+    if notification_id.len() > MAX_ENTITY_ID_LEN {
+        return Err("notification_id too long".into());
     }
     call_service(base, "persistent_notification", "dismiss", Some(&serde_json::json!({"notification_id": notification_id})))
 }
@@ -520,6 +552,23 @@ mod tests {
         assert!(!is_ip_only("192.168.1.1.evil.com"));
         assert!(!is_ip_only("abc.def.ghi.jkl"));
         assert!(!is_ip_only("192..168.1"));
+    }
+
+    #[test]
+    fn test_validate_event_type() {
+        assert!(validate_event_type("custom_event").is_ok());
+        assert!(validate_event_type("my.event").is_ok());
+        assert!(validate_event_type("event123").is_ok());
+        assert!(validate_event_type("").is_err());
+        assert!(validate_event_type("bad/event").is_err());
+        assert!(validate_event_type("bad event").is_err());
+        assert!(validate_event_type(&"x".repeat(256)).is_err());
+    }
+
+    #[test]
+    fn test_validate_not_empty() {
+        assert!(validate_not_empty("value", "field").is_ok());
+        assert!(validate_not_empty("", "field").is_err());
     }
 
     #[test]

@@ -51,7 +51,8 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 
 - Ask the user for their HA URL if you don't know it yet.
 - Once known, include `ha_url` in every ha-tool call for the rest of the conversation.
-- Common formats: `http://homeassistant.local:8123`, `http://192.168.x.x:8123`, `https://ha.example.com`
+- `ha_url` must point to a private/local address: `localhost`, `127.0.0.1`, `192.168.*`, `10.*`, `172.16-31.*`, `*.local`, `*.internal`, `*.lan`, `*.home`, `*.duckdns.org`, or `*.nabu.casa`.
+- Common formats: `http://homeassistant.local:8123`, `http://192.168.x.x:8123`, `https://myha.duckdns.org`
 
 ## Available Actions
 
