@@ -78,26 +78,25 @@ chmod +x scripts/install.sh
 
 The script will:
 
-1. Build the WASM tool from source (`cargo build --target wasm32-wasip2 --release`)
-2. Install the compiled tool into IronClaw (`ironclaw tool install`)
-3. Copy the skill file to `~/.ironclaw/skills/home-assistant/SKILL.md`
-4. Launch `ironclaw tool auth ha-tool` to securely store your HA token
+1. Install the tool from source via `ironclaw tool install ./tools-src/ha-tool` — IronClaw builds the WASM for you and auto-registers it in its **Tool Registry** (no skill required for the agent to find and use the tool).
+2. Copy the **optional** skill hint to `~/.ironclaw/skills/home-assistant.SKILL.md` — this enhances the agent's context but the tool works without it.
+3. Launch `ironclaw tool auth ha-tool` to securely store your HA long-lived access token (never touches the WASM sandbox — IronClaw injects it as a `Bearer` header at the host boundary).
 
 When prompted by `ironclaw tool auth ha-tool`, paste the long-lived access token you created above.
 
 ### Expected output
 
 ```
-==> Installing ha-tool from source...
+==> Installing ha-tool from source (IronClaw will build the WASM)...
 Installed successfully:
   Name: ha-tool
   WASM: ~/.ironclaw/tools/ha-tool.wasm
   Size: ~300 KB
 
-==> Installing skill...
-  Installed skill to: ~/.ironclaw/skills/home-assistant/SKILL.md
+==> Installing optional skill file (agent hint — not required)...
+  Installed skill: ~/.ironclaw/skills/home-assistant.SKILL.md
 
-==> Configuring authentication...
+==> Configuring Home Assistant access token...
   Home Assistant long-lived access token: ****
   ✓ Saved.
 ```
@@ -110,13 +109,13 @@ Installed successfully:
 ironclaw tool list
 ```
 
-You should see `ha-tool` in the list.
+You should see `ha-tool` in the list. For detailed info:
 
 ```bash
-ironclaw skills list
+ironclaw tool info ha-tool
 ```
 
-You should see `home-assistant` in the list.
+The skill hint (optional) lives at `~/.ironclaw/skills/home-assistant.SKILL.md`. IronClaw's Tool Registry auto-discovers the tool itself — the skill only adds extra context to the agent's system prompt.
 
 ---
 

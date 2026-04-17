@@ -10,18 +10,28 @@ if ! command -v ironclaw &>/dev/null; then
     exit 1
 fi
 
-echo "==> Installing ha-tool from source..."
-ironclaw tool install "$TOOL_SRC" --name ha-tool --force
+echo "==> Installing ha-tool from source (IronClaw will build the WASM)..."
+# IronClaw auto-discovers the tool via its Tool Registry — no skill required.
+# Matches upstream pattern: `ironclaw tool install ./tool-src-dir`.
+ironclaw tool install "$TOOL_SRC"
 
 echo ""
-echo "==> Installing skill..."
-SKILL_DIR="${HOME}/.ironclaw/skills/home-assistant"
-mkdir -p "$SKILL_DIR"
-cp "$ROOT_DIR/skills/SKILL.md" "$SKILL_DIR/SKILL.md"
-echo "  Installed skill to: $SKILL_DIR/SKILL.md"
+echo "==> Installing optional skill file (agent hint — not required)..."
+SKILL_SRC="$ROOT_DIR/skills/SKILL.md"
+SKILL_DEST_DIR="${HOME}/.ironclaw/skills"
+SKILL_DEST="$SKILL_DEST_DIR/home-assistant.SKILL.md"
+if [[ -f "$SKILL_SRC" ]]; then
+    mkdir -p "$SKILL_DEST_DIR"
+    cp "$SKILL_SRC" "$SKILL_DEST"
+    echo "  Installed skill: $SKILL_DEST"
+else
+    echo "  (No SKILL.md found — skipping; tool still works via auto-discovery)"
+fi
 
 echo ""
-echo "==> Configuring authentication..."
+echo "==> Configuring Home Assistant access token..."
+# `ironclaw tool auth` stores the ha_token secret; IronClaw injects it as a
+# Bearer header on HA API requests. The token never enters the WASM sandbox.
 ironclaw tool auth ha-tool
 
 echo ""
@@ -29,12 +39,12 @@ echo "============================================"
 echo "  ha-tool installed successfully!"
 echo "============================================"
 echo ""
-echo "Test the connection:"
-echo "  ironclaw chat"
-echo "  > Check if my Home Assistant at http://homeassistant.local:8123 is online"
+echo "Verify with:"
+echo "  ironclaw tool list"
+echo "  ironclaw tool info ha-tool"
 echo ""
-echo "Usage examples:"
-echo "  > What lights are on? (ha_url: http://homeassistant.local:8123)"
-echo "  > Turn off all lights in the bedroom"
-echo "  > Show me the temperature history for the last 24 hours"
+echo "Test in chat (remember: every call needs your HA base URL):"
+echo "  ironclaw chat"
+echo "  > Is my Home Assistant at http://homeassistant.local:8123 online?"
+echo "  > Turn off light.living_room on http://192.168.1.50:8123"
 echo ""

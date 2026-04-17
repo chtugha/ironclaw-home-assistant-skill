@@ -44,3 +44,11 @@
 - Tightened is_ip_only to validate exactly 4 octets of digits only (rejects degenerate inputs like ".", "192.168.", "192.168.1.1.evil.com")
 - Added is_ip_only unit test with 13 assertions covering valid IPs and degenerate/malicious inputs
 - 9 unit tests pass total
+
+### [x] Step: Design rethink — align with IronClaw ecosystem
+- Compared architecture against chtugha/zencoder-ironclaw-integration + ironclaw README
+- Confirmed: IronClaw's Tool Registry auto-discovers WASM tools via their exported description()/schema()/execute() WIT functions — no skill is required for the agent to use the tool
+- Confirmed: skill convention for user-added skills is flat file `~/.ironclaw/skills/<name>.SKILL.md`, not `<name>/SKILL.md` subdirectory
+- Confirmed: ha_url as per-call parameter remains correct because HA hosts are user-specific (zencoder has a fixed api.zencoder.ai; HA does not)
+- install.sh: removed unsupported `--force` flag, aligned with canonical `ironclaw tool install ./tools-src/ha-tool` pattern from upstream, fixed skill path to flat convention, made skill copy non-fatal, improved messaging
+- README.md: clarified skill is optional, updated expected output, noted Tool Registry auto-discovery
