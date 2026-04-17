@@ -141,7 +141,7 @@ If the user has installed the `ironclaw-remote-shell-extension`, `ha-tool` can p
 
 ### Shell-only actions (SSH required)
 - `shell_status` — check whether the remote-shell extension is installed/reachable
-- `shell_exec` — run an arbitrary shell command (`command`, optional `timeout_secs`)
+- `shell_exec` — run an arbitrary shell command (`command`, optional `timeout_secs`). **Intentionally unrestricted (root-equivalent on the HA host).** Only invoke with explicit user confirmation of the exact command for each call.
 - `shell_read_file` — read a file via `cat` (`path`)
 - `shell_write_file` — atomically write a file via `base64 -d` (`path`, `content`)
 - `shell_tail_file` — tail last N lines (`path`, `lines`)

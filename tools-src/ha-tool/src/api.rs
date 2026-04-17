@@ -495,7 +495,9 @@ pub fn get_error_log(
 }
 
 pub fn restart_ha(base: &str, ssh: Option<&SshConfig>) -> Result<String, String> {
-    if let Some(out) = shell::try_shell("restart_ha", ssh, |cfg| {
+    // Destructive action: use strict variant so shell-path errors propagate
+    // instead of silently falling back to a REST restart the user didn't ask for.
+    if let Some(out) = shell::try_shell_strict("restart_ha", ssh, |cfg| {
         shell::ha_cli(cfg, "core restart")
     })? {
         return Ok(out);

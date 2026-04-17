@@ -39,13 +39,9 @@ pub struct SshConfig {
 /// Invokes `list_sessions` which is cheap and side-effect-free. Any Ok
 /// response (even empty session list) means the sibling tool is usable.
 pub fn is_shell_available() -> bool {
-    let mut params = serde_json::json!({"action": "list_sessions"});
-    if let Ok(p) = serde_json::to_string(&params) {
-        return host::tool_invoke(REMOTE_SHELL_ALIAS, &p).is_ok();
-    }
-    // Silence the "unused must use" on mut when json! always succeeds.
-    let _ = params.as_object_mut();
-    false
+    let p = serde_json::to_string(&serde_json::json!({"action": "list_sessions"}))
+        .expect("serializing a static json object is infallible");
+    host::tool_invoke(REMOTE_SHELL_ALIAS, &p).is_ok()
 }
 
 fn log_shell_fallback(action: &str, reason: &str) {
@@ -77,6 +73,26 @@ where
             Ok(None)
         }
     }
+}
+
+/// Strict variant of `try_shell` for destructive actions (e.g. `restart_ha`).
+/// Only falls back to REST when remote-shell is NOT installed; propagates any
+/// shell execution error instead of silently routing to REST, so users who
+/// explicitly supplied SSH credentials don't get an unintended REST restart.
+pub fn try_shell_strict<F>(
+    action: &str,
+    ssh: Option<&SshConfig>,
+    f: F,
+) -> Result<Option<String>, String>
+where
+    F: FnOnce(&SshConfig) -> Result<String, String>,
+{
+    let Some(cfg) = ssh else { return Ok(None) };
+    if !is_shell_available() {
+        log_shell_fallback(action, "remote-shell extension not installed");
+        return Ok(None);
+    }
+    f(cfg).map(Some)
 }
 
 fn ensure_session(ssh: &SshConfig) -> Result<String, String> {
@@ -242,9 +258,11 @@ pub fn ha_cli(ssh: &SshConfig, args: &str) -> Result<String, String> {
     if args.len() > 2048 {
         return Err("args too long".into());
     }
-    // Reject shell metacharacters that would allow command injection beyond `ha`.
+    // Whitelist: only alphanumerics, space, and a small set of safe punctuation.
+    // This prevents quoting/globbing/continuation/injection beyond the `ha` CLI.
     for c in args.chars() {
-        if matches!(c, ';' | '&' | '|' | '`' | '$' | '>' | '<' | '\n' | '\r' | '\0') {
+        let ok = c.is_ascii_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.' | '=' | ':' | ',' | '/');
+        if !ok {
             return Err(format!("args contains forbidden character '{}'", c));
         }
     }
@@ -339,5 +357,12 @@ mod tests {
         assert!(ha_cli(&ssh, "core check && whoami").is_err());
         assert!(ha_cli(&ssh, "core check | grep x").is_err());
         assert!(ha_cli(&ssh, "").is_err());
+        // Whitelist rejects quoting and globbing too.
+        assert!(ha_cli(&ssh, "core 'check'").is_err());
+        assert!(ha_cli(&ssh, "core check\\").is_err());
+        assert!(ha_cli(&ssh, "core *").is_err());
+        assert!(ha_cli(&ssh, "core ?").is_err());
+        assert!(ha_cli(&ssh, "core (check)").is_err());
+        assert!(ha_cli(&ssh, "core {check}").is_err());
     }
 }
