@@ -59,7 +59,7 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 ### Discovery
 - `get_status` — Check if HA is reachable
 - `get_config` — Get HA configuration (version, location, units)
-- `get_states` — List all entities (use `domain_filter` to narrow: `light`, `switch`, `sensor`, `climate`, etc.)
+- `get_states` — List all entities (use `domain_filter` to narrow: `light`, `switch`, `sensor`, `climate`, etc.; optional `max_items` caps the returned list for small context budgets)
 - `get_services` — List all available service domains and their services
 
 ### Entity Control
@@ -100,7 +100,7 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 
 ### System & Reloads
 - `check_config` — Validate HA configuration
-- `get_error_log` — View the HA error log
+- `get_error_log` — View the HA error log (optional `tail_lines` returns only the last N lines — use for heartbeat/small-context scans)
 - `restart_ha` — Restart Home Assistant (use with caution!)
 - `reload_core_config` — Reload core `configuration.yaml` without restart
 - `reload_automations` — Reload automations after YAML edits

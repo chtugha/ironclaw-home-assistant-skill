@@ -79,3 +79,40 @@ corresponding `ha-tool` action with the stored params. Common remediations:
 - Use at most 8 tool calls per heartbeat tick to stay within typical LLM
   budgets. Batch via `get_states` with `domain_filter` rather than looping
   individual `get_state` calls.
+
+## Token Budget (MANDATORY — hard cap 1024 tokens)
+
+Every heartbeat tick MUST fit tool outputs + analysis + notification into
+**1024 tokens total**. Exceeding this budget will be truncated and degrade
+the next tick's diff quality.
+
+Enforce by:
+
+- Cap `get_error_log` with `tail_lines` (never fetch the full log in a tick).
+- Cap `get_states` with `max_items` when a domain is crowded.
+- Summarize each check into ≤ 120 tokens before writing to memory.
+- Notifications must be ≤ 400 characters; put details in `heartbeat/ha-latest.md`.
+- Never include raw JSON bodies in memory writes — store flat key/value lines.
+
+## Dynamic Profile Selection
+
+Pick ONE profile at the start of each tick based on the agent's available
+context budget, then apply the matching caps. Small LLMs stay lean; large
+LLMs scan deeper. If unsure, use `standard`.
+
+### minimal (≤ 2k-token context models)
+- Run only: `get_status`, `check_config`, `get_notifications`.
+- Skip state scans and error log entirely.
+- Notification only on failure; budget ≤ 300 tokens.
+
+### standard (4k–16k context, default)
+- Run: `get_status`, `check_config`, `get_notifications`,
+  `get_error_log tail_lines=40`.
+- Run state scans with `max_items=30` per domain (automation, sensor, update).
+- Summaries ≤ 120 tokens each; total budget ≤ 1024 tokens.
+
+### full (≥ 32k context)
+- Run: all checks listed above + `get_error_log tail_lines=200`.
+- `max_items=200` per state domain scan.
+- May include short excerpts of error lines in the notification.
+- Total budget may extend to 3072 tokens.

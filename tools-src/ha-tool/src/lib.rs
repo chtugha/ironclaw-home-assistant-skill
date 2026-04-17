@@ -57,8 +57,8 @@ fn execute_inner(params: &str) -> Result<String, String> {
 
     match action {
         HaAction::GetStatus { ha_url } => api::get_status(&ha_url),
-        HaAction::GetStates { ha_url, domain_filter } => {
-            api::get_states(&ha_url, domain_filter.as_deref())
+        HaAction::GetStates { ha_url, domain_filter, max_items } => {
+            api::get_states(&ha_url, domain_filter.as_deref(), max_items)
         }
         HaAction::GetState { ha_url, entity_id } => api::get_state(&ha_url, &entity_id),
         HaAction::SetState { ha_url, entity_id, state, attributes } => {
@@ -84,7 +84,7 @@ fn execute_inner(params: &str) -> Result<String, String> {
             api::get_calendar_events(&ha_url, &entity_id, &start, &end)
         }
         HaAction::ListAutomations { ha_url } => {
-            api::get_states(&ha_url, Some("automation"))
+            api::get_states(&ha_url, Some("automation"), None)
         }
         HaAction::ToggleAutomation { ha_url, entity_id, enabled } => {
             api::toggle_automation(&ha_url, &entity_id, enabled)
@@ -92,11 +92,11 @@ fn execute_inner(params: &str) -> Result<String, String> {
         HaAction::TriggerAutomation { ha_url, entity_id } => {
             api::trigger_automation(&ha_url, &entity_id)
         }
-        HaAction::ListScripts { ha_url } => api::get_states(&ha_url, Some("script")),
+        HaAction::ListScripts { ha_url } => api::get_states(&ha_url, Some("script"), None),
         HaAction::RunScript { ha_url, entity_id, variables } => {
             api::run_script(&ha_url, &entity_id, variables.as_ref())
         }
-        HaAction::ListScenes { ha_url } => api::get_states(&ha_url, Some("scene")),
+        HaAction::ListScenes { ha_url } => api::get_states(&ha_url, Some("scene"), None),
         HaAction::ActivateScene { ha_url, entity_id } => {
             api::activate_scene(&ha_url, &entity_id)
         }
@@ -112,7 +112,7 @@ fn execute_inner(params: &str) -> Result<String, String> {
             api::dismiss_notification(&ha_url, &notification_id)
         }
         HaAction::CheckConfig { ha_url } => api::check_config(&ha_url),
-        HaAction::GetErrorLog { ha_url } => api::get_error_log(&ha_url),
+        HaAction::GetErrorLog { ha_url, tail_lines } => api::get_error_log(&ha_url, tail_lines),
         HaAction::RestartHa { ha_url } => api::restart_ha(&ha_url),
         HaAction::ReloadCoreConfig { ha_url } => api::reload_core_config(&ha_url),
         HaAction::ReloadAutomations { ha_url } => api::reload_automations(&ha_url),

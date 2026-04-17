@@ -12,6 +12,8 @@ pub enum HaAction {
         ha_url: String,
         #[serde(default)]
         domain_filter: Option<String>,
+        #[serde(default)]
+        max_items: Option<u32>,
     },
 
     GetState {
@@ -150,6 +152,8 @@ pub enum HaAction {
 
     GetErrorLog {
         ha_url: String,
+        #[serde(default)]
+        tail_lines: Option<u32>,
     },
 
     RestartHa {

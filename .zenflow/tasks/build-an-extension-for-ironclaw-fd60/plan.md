@@ -60,6 +60,14 @@
 - install.sh: removed unsupported `--force` flag, aligned with canonical `ironclaw tool install ./tools-src/ha-tool` pattern from upstream, fixed skill path to flat convention, made skill copy non-fatal, improved messaging
 - README.md: clarified skill is optional, updated expected output, noted Tool Registry auto-discovery
 
+### [x] Step: Token budget + dynamic prompt sizing
+- Added `## Token Budget` section to HEARTBEAT.md with a mandatory 1024-token cap per tick.
+- Added `## Dynamic Profile Selection` with three tiers (minimal ≤2k, standard 4–16k, full ≥32k) that the heartbeat agent picks based on its available context budget.
+- Added optional `max_items: u32` parameter to `get_states` (capped at 500) so small-context agents can request fewer entities.
+- Added optional `tail_lines: u32` parameter to `get_error_log` so heartbeat ticks can fetch only the last N log lines instead of the full log.
+- Updated SKILL.md and capabilities.json to document the new parameters.
+- 12 unit tests still pass; WASM build clean.
+
 ### [x] Step: Heartbeat & Routines integration for background HA monitoring
 - Researched IronClaw heartbeat (reads `~/.ironclaw/HEARTBEAT.md` on each tick, default 30 min, runs as full agent job with all tools available) and cron routines (custom schedules via `routine_create`).
 - Added `heartbeat/HEARTBEAT.md` template: read-only HA health checks (status, check_config, notifications, error_log diff, automation/sensor/update domain scans) with strict confirmation-before-write discipline for all destructive actions (restart/reload/toggle/call_service/etc.).

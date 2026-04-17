@@ -193,7 +193,7 @@ pub fn get_config(base: &str) -> Result<String, String> {
     ha_get(base, "/api/config")
 }
 
-pub fn get_states(base: &str, domain_filter: Option<&str>) -> Result<String, String> {
+pub fn get_states(base: &str, domain_filter: Option<&str>, max_items: Option<u32>) -> Result<String, String> {
     let raw = ha_get(base, "/api/states")?;
     let all: Vec<serde_json::Value> = serde_json::from_str(&raw)
         .map_err(|e| format!("Failed to parse states: {}", e))?;
@@ -213,8 +213,11 @@ pub fn get_states(base: &str, domain_filter: Option<&str>) -> Result<String, Str
     };
 
     let total = filtered.len();
-    let (entities, truncated) = if total > MAX_STATES {
-        (filtered[..MAX_STATES].to_vec(), Some(true))
+    let cap = max_items
+        .map(|n| (n as usize).min(MAX_STATES).max(1))
+        .unwrap_or(MAX_STATES);
+    let (entities, truncated) = if total > cap {
+        (filtered[..cap].to_vec(), Some(true))
     } else {
         (filtered, None)
     };
@@ -456,8 +459,18 @@ pub fn check_config(base: &str) -> Result<String, String> {
     ha_post(base, "/api/config/core/check_config", Some("{}"))
 }
 
-pub fn get_error_log(base: &str) -> Result<String, String> {
-    ha_get(base, "/api/error_log")
+pub fn get_error_log(base: &str, tail_lines: Option<u32>) -> Result<String, String> {
+    let full = ha_get(base, "/api/error_log")?;
+    if let Some(n) = tail_lines {
+        if n == 0 {
+            return Err("tail_lines must be >= 1".into());
+        }
+        let n = n as usize;
+        let lines: Vec<&str> = full.lines().collect();
+        let start = lines.len().saturating_sub(n);
+        return Ok(lines[start..].join("\n"));
+    }
+    Ok(full)
 }
 
 pub fn restart_ha(base: &str) -> Result<String, String> {

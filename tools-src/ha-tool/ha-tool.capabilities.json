@@ -18,7 +18,9 @@
       "activate_scene requires entity_id",
       "mqtt_publish requires topic and payload",
       "modbus_write requires unit, address, value, and write_type (coil or holding); hub is optional for multi-hub setups",
-      "reload_config_entry requires entry_id (the HA integration config entry id)"
+      "reload_config_entry requires entry_id (the HA integration config entry id)",
+      "get_states accepts optional max_items (1..=500) to cap the entity list for small context budgets",
+      "get_error_log accepts optional tail_lines to return only the last N log lines (use in heartbeat to stay within token budget)"
     ],
     "notes": [
       "ha_url is required on every call — ask the user for their Home Assistant URL if unknown.",
