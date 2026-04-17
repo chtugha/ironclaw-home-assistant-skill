@@ -98,10 +98,25 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 - `dismiss_notification` — Dismiss a notification by ID
 - To **send** a notification, use `call_service` with domain `notify` and the target service (e.g., `mobile_app_my_phone`)
 
-### System
+### System & Reloads
 - `check_config` — Validate HA configuration
 - `get_error_log` — View the HA error log
 - `restart_ha` — Restart Home Assistant (use with caution!)
+- `reload_core_config` — Reload core `configuration.yaml` without restart
+- `reload_automations` — Reload automations after YAML edits
+- `reload_scripts` — Reload scripts after YAML edits
+- `reload_scenes` — Reload scenes after YAML edits
+- `reload_themes` — Reload frontend themes
+- `reload_config_entry` — Reload an integration config entry (requires `entry_id`)
+
+## Complementary: Home Assistant MCP Server
+
+If your HA instance has the [MCP Server integration](https://www.home-assistant.io/integrations/mcp_server/) enabled, IronClaw can connect to it directly as a native MCP client for Assist-exposed entities (conversational control). `ha-tool` covers the full REST surface (maintenance, reloads, automations, raw state writes, MQTT, Modbus, error logs, restart) which HA's MCP server does not expose. Use both together for maximum coverage.
+
+## Limitations
+
+- Real-time WebSocket event subscription is not supported (WASM sandbox is request/response only). Use `get_history` / `get_logbook` polling for monitoring.
+- Direct YAML file editing is out of scope. Use `reload_*` actions after the user edits files, or call the File Editor addon's own services via `call_service`.
 
 ## Workflow Tips
 

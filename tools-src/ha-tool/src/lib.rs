@@ -32,8 +32,9 @@ impl exports::near::agent::tool::Guest for HaTool {
     fn description() -> String {
         "Home Assistant integration tool. Control lights, switches, climate, media players, \
          automations, scripts, scenes, MQTT, Modbus, templates, history, logbook, calendar, \
-         notifications, and system management via the HA REST API. \
-         Requires ha_token (configure with `ironclaw tool auth ha-tool`). \
+         notifications, reloads (core_config, automations, scripts, scenes, themes, \
+         config_entry), and system management (check_config, error_log, restart) via the HA \
+         REST API. Requires ha_token (configure with `ironclaw tool auth ha-tool`). \
          Every call requires ha_url parameter with the HA instance base URL."
             .to_string()
     }
@@ -113,6 +114,14 @@ fn execute_inner(params: &str) -> Result<String, String> {
         HaAction::CheckConfig { ha_url } => api::check_config(&ha_url),
         HaAction::GetErrorLog { ha_url } => api::get_error_log(&ha_url),
         HaAction::RestartHa { ha_url } => api::restart_ha(&ha_url),
+        HaAction::ReloadCoreConfig { ha_url } => api::reload_core_config(&ha_url),
+        HaAction::ReloadAutomations { ha_url } => api::reload_automations(&ha_url),
+        HaAction::ReloadScripts { ha_url } => api::reload_scripts(&ha_url),
+        HaAction::ReloadScenes { ha_url } => api::reload_scenes(&ha_url),
+        HaAction::ReloadThemes { ha_url } => api::reload_themes(&ha_url),
+        HaAction::ReloadConfigEntry { ha_url, entry_id } => {
+            api::reload_config_entry(&ha_url, &entry_id)
+        }
     }
 }
 

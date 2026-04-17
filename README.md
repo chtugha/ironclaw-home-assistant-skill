@@ -383,6 +383,52 @@ Restart Home Assistant.
 
 ---
 
+### Reloading YAML changes without restart
+
+```
+Reload Home Assistant core configuration.
+```
+
+```
+Reload automations.
+```
+
+```
+Reload scripts.
+```
+
+```
+Reload scenes.
+```
+
+```
+Reload themes.
+```
+
+```
+Reload the config entry abc123def456.
+```
+
+---
+
+## Complementary: Home Assistant MCP Server
+
+Home Assistant ships an optional [MCP Server integration](https://www.home-assistant.io/integrations/mcp_server/) that exposes Assist-domain entities over the Model Context Protocol. IronClaw natively supports MCP clients, so you can enable both:
+
+- **`ha-tool` (this extension)** — full REST coverage: state read/write, service calls, automations, scripts, scenes, MQTT, Modbus, templates, history, logbook, calendar, persistent notifications, reloads, error log, restart.
+- **HA MCP Server (optional)** — conversational Assist-exposed entities via MCP, useful for natural-language control of the subset of entities you flag as "exposed to Assist".
+
+They are complementary — the REST tool covers administration and maintenance the MCP server doesn't, and the MCP server provides a curated conversational surface that respects HA's Assist exposure settings.
+
+---
+
+## Limitations
+
+- **No real-time event subscription.** WASM tools are request/response only — there is no WebSocket event loop. Use `get_history` and `get_logbook` for time-range queries, or poll `get_state` for near-real-time monitoring.
+- **No direct YAML file editing.** To apply YAML changes, edit files via HA's File Editor add-on or SSH, then run the appropriate `reload_*` action. Config Entry reloads (for integrations configured via the UI) are supported via `reload_config_entry`.
+
+---
+
 ## Supported ha_url Formats
 
 The `ha_url` parameter must point to a **private or local address**. Public internet IPs are blocked for security.

@@ -460,6 +460,44 @@ pub fn restart_ha(base: &str) -> Result<String, String> {
     ha_post(base, "/api/services/homeassistant/restart", Some("{}"))
 }
 
+pub fn reload_core_config(base: &str) -> Result<String, String> {
+    call_service(base, "homeassistant", "reload_core_config", None)
+}
+
+pub fn reload_automations(base: &str) -> Result<String, String> {
+    call_service(base, "automation", "reload", None)
+}
+
+pub fn reload_scripts(base: &str) -> Result<String, String> {
+    call_service(base, "script", "reload", None)
+}
+
+pub fn reload_scenes(base: &str) -> Result<String, String> {
+    call_service(base, "scene", "reload", None)
+}
+
+pub fn reload_themes(base: &str) -> Result<String, String> {
+    call_service(base, "frontend", "reload_themes", None)
+}
+
+pub fn reload_config_entry(base: &str, entry_id: &str) -> Result<String, String> {
+    validate_not_empty(entry_id, "entry_id")?;
+    if entry_id.len() > MAX_ENTITY_ID_LEN {
+        return Err("entry_id too long".into());
+    }
+    for c in entry_id.chars() {
+        if !c.is_alphanumeric() && c != '_' && c != '-' {
+            return Err(format!("entry_id contains invalid character '{}'", c));
+        }
+    }
+    call_service(
+        base,
+        "homeassistant",
+        "reload_config_entry",
+        Some(&serde_json::json!({"entry_id": entry_id})),
+    )
+}
+
 fn days_to_ymd(days_since_epoch: i64) -> (i64, u32, u32) {
     let z = days_since_epoch + 719468;
     let era = (if z >= 0 { z } else { z - 146096 }) / 146097;

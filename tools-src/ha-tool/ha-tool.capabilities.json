@@ -17,7 +17,8 @@
       "run_script requires entity_id",
       "activate_scene requires entity_id",
       "mqtt_publish requires topic and payload",
-      "modbus_write requires unit, address, value, and write_type (coil or holding); hub is optional for multi-hub setups"
+      "modbus_write requires unit, address, value, and write_type (coil or holding); hub is optional for multi-hub setups",
+      "reload_config_entry requires entry_id (the HA integration config entry id)"
     ],
     "notes": [
       "ha_url is required on every call — ask the user for their Home Assistant URL if unknown.",
@@ -25,7 +26,8 @@
       "Use get_services to discover available service domains and names.",
       "MQTT: use mqtt_publish or call_service(mqtt, publish).",
       "Modbus: use modbus_write or call_service(modbus, write_register/write_coil).",
-      "restart_ha restarts the Home Assistant instance — use with caution."
+      "restart_ha restarts the Home Assistant instance — use with caution.",
+      "reload_* actions apply YAML edits without a full restart (reload_core_config, reload_automations, reload_scripts, reload_scenes, reload_themes, reload_config_entry)."
     ],
     "examples": [
       {"action": "get_states", "ha_url": "http://homeassistant.local:8123"},

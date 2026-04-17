@@ -155,6 +155,31 @@ pub enum HaAction {
     RestartHa {
         ha_url: String,
     },
+
+    ReloadCoreConfig {
+        ha_url: String,
+    },
+
+    ReloadAutomations {
+        ha_url: String,
+    },
+
+    ReloadScripts {
+        ha_url: String,
+    },
+
+    ReloadScenes {
+        ha_url: String,
+    },
+
+    ReloadThemes {
+        ha_url: String,
+    },
+
+    ReloadConfigEntry {
+        ha_url: String,
+        entry_id: String,
+    },
 }
 
 fn default_hours_back() -> u32 {

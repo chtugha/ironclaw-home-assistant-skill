@@ -45,6 +45,13 @@
 - Added is_ip_only unit test with 13 assertions covering valid IPs and degenerate/malicious inputs
 - 9 unit tests pass total
 
+### [x] Step: Monitor/Maintain audit + HA MCP server alignment
+- Audit confirmed REST coverage is sufficient for monitoring (get_status/config/state/states/history/logbook/calendar/notifications/error_log) and maintenance (call_service, set_state, toggle/trigger automation, run_script, activate_scene, mqtt_publish, modbus_write, fire_event, render_template, dismiss_notification, check_config, restart_ha)
+- Added first-class reload actions: reload_core_config, reload_automations, reload_scripts, reload_scenes, reload_themes, reload_config_entry
+- Documented complementarity with HA's MCP Server integration in README and SKILL.md (IronClaw consumes MCP natively; ha-tool covers the REST admin/maintenance surface MCP doesn't)
+- Documented limitations: no WebSocket event subscription (WASM request/response only), no direct YAML editing
+- 11 unit tests still pass; WASM builds cleanly
+
 ### [x] Step: Design rethink — align with IronClaw ecosystem
 - Compared architecture against chtugha/zencoder-ironclaw-integration + ironclaw README
 - Confirmed: IronClaw's Tool Registry auto-discovers WASM tools via their exported description()/schema()/execute() WIT functions — no skill is required for the agent to use the tool
