@@ -73,3 +73,11 @@
 - Added `heartbeat/HEARTBEAT.md` template: read-only HA health checks (status, check_config, notifications, error_log diff, automation/sensor/update domain scans) with strict confirmation-before-write discipline for all destructive actions (restart/reload/toggle/call_service/etc.).
 - Added `heartbeat/routines.md` with 5 cron-routine prompts (hourly health, daily errors, weekly updates, stuck-automation, battery-low) — all read-only by design, remediations gated behind user chat confirmation.
 - Updated `scripts/install.sh` to optionally copy `HEARTBEAT.md` to `~/.ironclaw/HEARTBEAT.md` (non-clobbering) and print routine-creation instructions.
+
+### [x] Step: Remote-shell extension integration
+- Added `src/shell.rs` with SshConfig, `is_shell_available()` probe via `host::tool_invoke("remote-shell", list_sessions)`, `try_shell()` helper (Ok(None) fallback + warn log), `ensure_session()`, `shell_exec/read_file/write_file/tail_file/ha_cli/shell_status`, and tiny base64 encoder.
+- Extended `CheckConfig`, `GetErrorLog`, `RestartHa` with optional `ssh: Option<SshConfig>` (+ `log_path` for GetErrorLog) — each tries shell first, falls back to REST on failure/absence.
+- Added shell-only variants: `ShellStatus`, `ShellExec`, `ShellReadFile`, `ShellWriteFile`, `ShellTailFile`, `HaCli`.
+- Registered `remote-shell` alias in `ha-tool.capabilities.json` under `tool_invoke.aliases`.
+- Documented in `skills/SKILL.md` (SshConfig schema, shell-aware + shell-only actions, YAML-edit workflow).
+- 15 unit tests pass (3 new shell tests: b64_encode, validate_path, ha_cli metachar rejection). WASM build clean.

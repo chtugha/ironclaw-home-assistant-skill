@@ -113,10 +113,51 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 
 If your HA instance has the [MCP Server integration](https://www.home-assistant.io/integrations/mcp_server/) enabled, IronClaw can connect to it directly as a native MCP client for Assist-exposed entities (conversational control). `ha-tool` covers the full REST surface (maintenance, reloads, automations, raw state writes, MQTT, Modbus, error logs, restart) which HA's MCP server does not expose. Use both together for maximum coverage.
 
+## Shell-Backed Actions (optional, via `remote-shell` extension)
+
+If the user has installed the `ironclaw-remote-shell-extension`, `ha-tool` can perform operations that the REST API cannot (YAML editing, real log tailing, `ha` supervisor CLI). Pass an `ssh` object to any shell-aware action. If the remote-shell extension is not installed or the shell call fails, `ha-tool` logs a warning and falls back to the REST API automatically.
+
+### SshConfig schema
+```json
+{
+  "ssh": {
+    "session_id": "optional — reuse an existing session",
+    "host": "homeassistant.local",
+    "port": 22,
+    "username": "root",
+    "password": "optional",
+    "private_key_pem": "optional",
+    "host_key_fingerprint": "optional",
+    "insecure_ignore_host_key": false,
+    "gateway_port": 0
+  }
+}
+```
+
+### Shell-aware REST actions (SSH optional)
+- `check_config` — prefers `ha core check` over SSH when `ssh` is provided
+- `get_error_log` — prefers `tail -n <tail_lines> <log_path>` over SSH (path defaults to `/config/home-assistant.log`)
+- `restart_ha` — prefers `ha core restart` over SSH
+
+### Shell-only actions (SSH required)
+- `shell_status` — check whether the remote-shell extension is installed/reachable
+- `shell_exec` — run an arbitrary shell command (`command`, optional `timeout_secs`)
+- `shell_read_file` — read a file via `cat` (`path`)
+- `shell_write_file` — atomically write a file via `base64 -d` (`path`, `content`)
+- `shell_tail_file` — tail last N lines (`path`, `lines`)
+- `ha_cli` — run `ha <args>` (e.g. `core check`, `core restart`, `core logs`, `addons list`)
+
+### Typical YAML-edit workflow
+1. `shell_read_file` to fetch `/config/automations.yaml`
+2. Modify content locally/in agent memory
+3. `shell_write_file` to persist the new content
+4. `check_config` to validate
+5. `reload_automations` (REST) to apply without restart
+
 ## Limitations
 
 - Real-time WebSocket event subscription is not supported (WASM sandbox is request/response only). Use `get_history` / `get_logbook` polling for monitoring.
-- Direct YAML file editing is out of scope. Use `reload_*` actions after the user edits files, or call the File Editor addon's own services via `call_service`.
+- Without the `remote-shell` extension, direct YAML file editing is out of scope. Use `reload_*` actions after the user edits files, or call the File Editor addon's own services via `call_service`.
 
 ## Workflow Tips
 

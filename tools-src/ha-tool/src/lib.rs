@@ -1,4 +1,5 @@
 mod api;
+mod shell;
 mod types;
 
 use types::HaAction;
@@ -111,9 +112,21 @@ fn execute_inner(params: &str) -> Result<String, String> {
         HaAction::DismissNotification { ha_url, notification_id } => {
             api::dismiss_notification(&ha_url, &notification_id)
         }
-        HaAction::CheckConfig { ha_url } => api::check_config(&ha_url),
-        HaAction::GetErrorLog { ha_url, tail_lines } => api::get_error_log(&ha_url, tail_lines),
-        HaAction::RestartHa { ha_url } => api::restart_ha(&ha_url),
+        HaAction::CheckConfig { ha_url, ssh } => api::check_config(&ha_url, ssh.as_ref()),
+        HaAction::GetErrorLog { ha_url, tail_lines, ssh, log_path } => {
+            api::get_error_log(&ha_url, tail_lines, ssh.as_ref(), log_path.as_deref())
+        }
+        HaAction::RestartHa { ha_url, ssh } => api::restart_ha(&ha_url, ssh.as_ref()),
+        HaAction::ShellStatus => shell::shell_status(),
+        HaAction::ShellExec { ssh, command, timeout_secs } => {
+            shell::shell_exec(&ssh, &command, timeout_secs)
+        }
+        HaAction::ShellReadFile { ssh, path } => shell::read_file(&ssh, &path),
+        HaAction::ShellWriteFile { ssh, path, content } => {
+            shell::write_file(&ssh, &path, &content)
+        }
+        HaAction::ShellTailFile { ssh, path, lines } => shell::tail_file(&ssh, &path, lines),
+        HaAction::HaCli { ssh, args } => shell::ha_cli(&ssh, &args),
         HaAction::ReloadCoreConfig { ha_url } => api::reload_core_config(&ha_url),
         HaAction::ReloadAutomations { ha_url } => api::reload_automations(&ha_url),
         HaAction::ReloadScripts { ha_url } => api::reload_scripts(&ha_url),

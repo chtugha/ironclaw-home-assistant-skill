@@ -64,6 +64,11 @@
   "secrets": {
     "allowed_names": ["ha_token"]
   },
+  "tool_invoke": {
+    "aliases": {
+      "remote-shell": "remote-shell"
+    }
+  },
   "auth": {
     "secret_name": "ha_token",
     "display_name": "Home Assistant",
