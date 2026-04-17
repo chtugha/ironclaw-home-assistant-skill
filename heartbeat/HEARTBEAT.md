@@ -80,11 +80,16 @@ corresponding `ha-tool` action with the stored params. Common remediations:
   budgets. Batch via `get_states` with `domain_filter` rather than looping
   individual `get_state` calls.
 
-## Token Budget (MANDATORY — hard cap 1024 tokens)
+## Token Budget (target — 1024 tokens per tick)
 
-Every heartbeat tick MUST fit tool outputs + analysis + notification into
-**1024 tokens total**. Exceeding this budget will be truncated and degrade
-the next tick's diff quality.
+This is an LLM-side guideline, not a runtime-enforced limit. Every
+heartbeat tick should fit tool outputs + analysis + notification into
+**~1024 tokens total**. Exceeding this budget degrades the next tick's
+diff quality and may be truncated by the model.
+
+Note: `tail_lines` and `max_items` reduce **LLM context usage**, not
+network traffic — HA has no server-side tail parameter, so the full
+payload is still fetched over HTTP before local trimming.
 
 Enforce by:
 

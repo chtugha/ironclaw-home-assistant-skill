@@ -213,9 +213,11 @@ pub fn get_states(base: &str, domain_filter: Option<&str>, max_items: Option<u32
     };
 
     let total = filtered.len();
-    let cap = max_items
-        .map(|n| (n as usize).min(MAX_STATES).max(1))
-        .unwrap_or(MAX_STATES);
+    let cap = match max_items {
+        Some(0) => return Err("max_items must be >= 1".into()),
+        Some(n) => (n as usize).min(MAX_STATES),
+        None => MAX_STATES,
+    };
     let (entities, truncated) = if total > cap {
         (filtered[..cap].to_vec(), Some(true))
     } else {

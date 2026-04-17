@@ -100,7 +100,7 @@ Every ha-tool call requires `ha_url` — the base URL of the user's HA instance 
 
 ### System & Reloads
 - `check_config` — Validate HA configuration
-- `get_error_log` — View the HA error log (optional `tail_lines` returns only the last N lines — use for heartbeat/small-context scans)
+- `get_error_log` — View the HA error log (optional `tail_lines` returns only the last N lines — reduces LLM context usage, not network traffic, since HA has no server-side tail)
 - `restart_ha` — Restart Home Assistant (use with caution!)
 - `reload_core_config` — Reload core `configuration.yaml` without restart
 - `reload_automations` — Reload automations after YAML edits
