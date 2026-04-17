@@ -61,6 +61,10 @@ fn validate_ha_url(ha_url: &str) -> Result<(), String> {
     Ok(())
 }
 
+// Structural IPv4 shape check used only to guard the private-address SSRF
+// check. Octets are NOT range-clamped to 0-255 because the prefix match
+// (192.168., 10., 172.16-31.) already constrains the meaningful octets,
+// and accepting "999" in a trailing octet cannot escape a private prefix.
 fn is_ip_only(s: &str) -> bool {
     if s.is_empty() || s.starts_with('.') || s.ends_with('.') || s.contains("..") {
         return false;
@@ -457,7 +461,7 @@ pub fn get_error_log(base: &str) -> Result<String, String> {
 }
 
 pub fn restart_ha(base: &str) -> Result<String, String> {
-    ha_post(base, "/api/services/homeassistant/restart", Some("{}"))
+    call_service(base, "homeassistant", "restart", None)
 }
 
 pub fn reload_core_config(base: &str) -> Result<String, String> {
@@ -615,6 +619,17 @@ mod tests {
     fn test_normalize_url() {
         assert_eq!(normalize_url("http://ha:8123/"), "http://ha:8123");
         assert_eq!(normalize_url("http://ha:8123"), "http://ha:8123");
+    }
+
+    #[test]
+    fn test_reload_config_entry_validation() {
+        // Input validation must fail before any host::http_request call, so
+        // these assertions exercise only the local validator paths.
+        let base = "http://192.168.1.1:8123";
+        assert!(reload_config_entry(base, "").unwrap_err().contains("must not be empty"));
+        assert!(reload_config_entry(base, "bad/id").unwrap_err().contains("invalid character"));
+        assert!(reload_config_entry(base, "bad id").unwrap_err().contains("invalid character"));
+        assert!(reload_config_entry(base, &"a".repeat(MAX_ENTITY_ID_LEN + 1)).unwrap_err().contains("too long"));
     }
 
     #[test]
