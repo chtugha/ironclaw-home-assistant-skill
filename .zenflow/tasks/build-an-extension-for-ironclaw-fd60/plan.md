@@ -59,3 +59,9 @@
 - Confirmed: ha_url as per-call parameter remains correct because HA hosts are user-specific (zencoder has a fixed api.zencoder.ai; HA does not)
 - install.sh: removed unsupported `--force` flag, aligned with canonical `ironclaw tool install ./tools-src/ha-tool` pattern from upstream, fixed skill path to flat convention, made skill copy non-fatal, improved messaging
 - README.md: clarified skill is optional, updated expected output, noted Tool Registry auto-discovery
+
+### [x] Step: Heartbeat & Routines integration for background HA monitoring
+- Researched IronClaw heartbeat (reads `~/.ironclaw/HEARTBEAT.md` on each tick, default 30 min, runs as full agent job with all tools available) and cron routines (custom schedules via `routine_create`).
+- Added `heartbeat/HEARTBEAT.md` template: read-only HA health checks (status, check_config, notifications, error_log diff, automation/sensor/update domain scans) with strict confirmation-before-write discipline for all destructive actions (restart/reload/toggle/call_service/etc.).
+- Added `heartbeat/routines.md` with 5 cron-routine prompts (hourly health, daily errors, weekly updates, stuck-automation, battery-low) — all read-only by design, remediations gated behind user chat confirmation.
+- Updated `scripts/install.sh` to optionally copy `HEARTBEAT.md` to `~/.ironclaw/HEARTBEAT.md` (non-clobbering) and print routine-creation instructions.

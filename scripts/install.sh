@@ -29,6 +29,23 @@ else
 fi
 
 echo ""
+echo "==> Installing optional HEARTBEAT.md template (background monitoring)..."
+HEARTBEAT_SRC="$ROOT_DIR/heartbeat/HEARTBEAT.md"
+HEARTBEAT_DEST_DIR="${HOME}/.ironclaw"
+HEARTBEAT_DEST="$HEARTBEAT_DEST_DIR/HEARTBEAT.md"
+if [[ -f "$HEARTBEAT_SRC" ]]; then
+    if [[ -f "$HEARTBEAT_DEST" ]]; then
+        echo "  HEARTBEAT.md already exists at $HEARTBEAT_DEST — leaving unchanged."
+        echo "  (Merge entries from $HEARTBEAT_SRC manually if desired.)"
+    else
+        mkdir -p "$HEARTBEAT_DEST_DIR"
+        cp "$HEARTBEAT_SRC" "$HEARTBEAT_DEST"
+        echo "  Installed: $HEARTBEAT_DEST"
+        echo "  Edit it and replace HA_URL with your Home Assistant base URL."
+    fi
+fi
+
+echo ""
 echo "==> Configuring Home Assistant access token..."
 # `ironclaw tool auth` stores the ha_token secret; IronClaw injects it as a
 # Bearer header on HA API requests. The token never enters the WASM sandbox.
@@ -47,4 +64,10 @@ echo "Test in chat (remember: every call needs your HA base URL):"
 echo "  ironclaw chat"
 echo "  > Is my Home Assistant at http://homeassistant.local:8123 online?"
 echo "  > Turn off light.living_room on http://192.168.1.50:8123"
+echo ""
+echo "Background monitoring (optional):"
+echo "  1. Edit $HOME/.ironclaw/HEARTBEAT.md and replace HA_URL with your HA URL."
+echo "  2. Ensure HEARTBEAT_ENABLED=true in your IronClaw config."
+echo "  3. See heartbeat/routines.md for cron-routine prompts you can paste"
+echo "     into chat to create scheduled HA health checks."
 echo ""
