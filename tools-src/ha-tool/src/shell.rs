@@ -7,6 +7,14 @@ const MAX_COMMAND_LEN: usize = 65_536;
 const MAX_PATH_LEN: usize = 4096;
 const MAX_FILE_WRITE_LEN: usize = 1_048_576; // 1 MiB safety cap
 const DEFAULT_EXEC_TIMEOUT_SECS: u32 = 60;
+const MIN_EXEC_TIMEOUT_SECS: u32 = 1;
+const MAX_EXEC_TIMEOUT_SECS: u32 = 3600;
+const READ_EXEC_TIMEOUT_SECS: u32 = 30;
+const HA_CLI_EXEC_TIMEOUT_SECS: u32 = 300;
+const MAX_SSH_HOST_LEN: usize = 253;
+const MAX_SSH_USERNAME_LEN: usize = 256;
+const MAX_HA_CLI_ARGS_LEN: usize = 2048;
+const MAX_TAIL_LINES: u32 = 100_000;
 
 /// SSH connection parameters accepted on every shell-backed action.
 ///
@@ -109,11 +117,11 @@ fn ensure_session(ssh: &SshConfig) -> Result<String, String> {
         .username
         .as_deref()
         .ok_or("ssh.username required when session_id is not provided")?;
-    if host.is_empty() || host.len() > 253 {
-        return Err("ssh.host must be 1-253 characters".into());
+    if host.is_empty() || host.len() > MAX_SSH_HOST_LEN {
+        return Err(format!("ssh.host must be 1-{} characters", MAX_SSH_HOST_LEN));
     }
-    if username.is_empty() || username.len() > 256 {
-        return Err("ssh.username must be 1-256 characters".into());
+    if username.is_empty() || username.len() > MAX_SSH_USERNAME_LEN {
+        return Err(format!("ssh.username must be 1-{} characters", MAX_SSH_USERNAME_LEN));
     }
     let auth = if let Some(pw) = &ssh.password {
         serde_json::json!({"type": "password", "password": pw})
@@ -159,7 +167,9 @@ pub fn shell_exec(ssh: &SshConfig, command: &str, timeout_secs: Option<u32>) -> 
         return Err(format!("command too long (max {} bytes)", MAX_COMMAND_LEN));
     }
     let session_id = ensure_session(ssh)?;
-    let timeout = timeout_secs.unwrap_or(DEFAULT_EXEC_TIMEOUT_SECS).clamp(1, 3600);
+    let timeout = timeout_secs
+        .unwrap_or(DEFAULT_EXEC_TIMEOUT_SECS)
+        .clamp(MIN_EXEC_TIMEOUT_SECS, MAX_EXEC_TIMEOUT_SECS);
     let mut body = serde_json::json!({
         "action": "execute",
         "session_id": session_id,
@@ -212,7 +222,7 @@ fn validate_path(path: &str) -> Result<(), String> {
 /// Read a file over SSH via `cat`.
 pub fn read_file(ssh: &SshConfig, path: &str) -> Result<String, String> {
     validate_path(path)?;
-    let raw = shell_exec(ssh, &format!("cat '{}'", path), Some(30))?;
+    let raw = shell_exec(ssh, &format!("cat '{}'", path), Some(READ_EXEC_TIMEOUT_SECS))?;
     let (code, stdout, stderr) = parse_exec_output(&raw)?;
     if code != 0 {
         return Err(format!("cat failed (exit {}): {}", code, stderr.trim()));
@@ -228,7 +238,7 @@ pub fn write_file(ssh: &SshConfig, path: &str, content: &str) -> Result<String, 
     }
     let b64 = b64_encode(content.as_bytes());
     let command = format!("printf %s '{}' | base64 -d > '{}'", b64, path);
-    let raw = shell_exec(ssh, &command, Some(60))?;
+    let raw = shell_exec(ssh, &command, Some(DEFAULT_EXEC_TIMEOUT_SECS))?;
     let (code, _stdout, stderr) = parse_exec_output(&raw)?;
     if code != 0 {
         return Err(format!("write failed (exit {}): {}", code, stderr.trim()));
@@ -239,10 +249,10 @@ pub fn write_file(ssh: &SshConfig, path: &str, content: &str) -> Result<String, 
 /// Tail last N lines of a file.
 pub fn tail_file(ssh: &SshConfig, path: &str, lines: u32) -> Result<String, String> {
     validate_path(path)?;
-    if lines == 0 || lines > 100_000 {
-        return Err("lines must be between 1 and 100000".into());
+    if lines == 0 || lines > MAX_TAIL_LINES {
+        return Err(format!("lines must be between 1 and {}", MAX_TAIL_LINES));
     }
-    let raw = shell_exec(ssh, &format!("tail -n {} '{}'", lines, path), Some(30))?;
+    let raw = shell_exec(ssh, &format!("tail -n {} '{}'", lines, path), Some(READ_EXEC_TIMEOUT_SECS))?;
     let (code, stdout, stderr) = parse_exec_output(&raw)?;
     if code != 0 {
         return Err(format!("tail failed (exit {}): {}", code, stderr.trim()));
@@ -255,8 +265,8 @@ pub fn ha_cli(ssh: &SshConfig, args: &str) -> Result<String, String> {
     if args.is_empty() {
         return Err("args must not be empty (e.g. 'core check', 'core restart', 'core logs')".into());
     }
-    if args.len() > 2048 {
-        return Err("args too long".into());
+    if args.len() > MAX_HA_CLI_ARGS_LEN {
+        return Err(format!("args too long (max {} bytes)", MAX_HA_CLI_ARGS_LEN));
     }
     // Whitelist: only alphanumerics, space, and a small set of safe punctuation.
     // This prevents quoting/globbing/continuation/injection beyond the `ha` CLI.
@@ -266,7 +276,7 @@ pub fn ha_cli(ssh: &SshConfig, args: &str) -> Result<String, String> {
             return Err(format!("args contains forbidden character '{}'", c));
         }
     }
-    shell_exec(ssh, &format!("ha {}", args), Some(300))
+    shell_exec(ssh, &format!("ha {}", args), Some(HA_CLI_EXEC_TIMEOUT_SECS))
 }
 
 /// Status snapshot: which shell integration is present.

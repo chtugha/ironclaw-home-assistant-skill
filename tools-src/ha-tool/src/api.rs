@@ -7,6 +7,13 @@ const MAX_HOURS_BACK: u32 = 8760;
 const MAX_ENTITY_ID_LEN: usize = 255;
 const MAX_EVENT_TYPE_LEN: usize = 255;
 const MAX_STATE_LEN: usize = 255;
+const MAX_TEMPLATE_LEN: usize = 65_536;
+const MAX_MQTT_TOPIC_LEN: usize = 65_535;
+const DEFAULT_HA_LOG_PATH: &str = "/config/home-assistant.log";
+const DEFAULT_SHELL_TAIL_LINES: u32 = 200;
+const MS_PER_SECOND: u64 = 1000;
+const SECONDS_PER_HOUR: u64 = 3600;
+const SECONDS_PER_DAY: u64 = 86400;
 
 fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -156,6 +163,20 @@ fn validate_iso_prefix(s: &str, field: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Format `now - hours_back` as an ISO 8601 UTC timestamp (`YYYY-MM-DDThh:mm:ssZ`).
+fn iso_timestamp_hours_ago(hours_back: u32) -> String {
+    let now_ms = host::now_millis();
+    let start_ms = now_ms.saturating_sub((hours_back as u64) * SECONDS_PER_HOUR * MS_PER_SECOND);
+    let secs = start_ms / MS_PER_SECOND;
+    let d = secs / SECONDS_PER_DAY;
+    let rem = secs % SECONDS_PER_DAY;
+    let h = rem / SECONDS_PER_HOUR;
+    let m = (rem % SECONDS_PER_HOUR) / 60;
+    let s = rem % 60;
+    let (y, mo, day) = days_to_ymd(d as i64);
+    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, mo, day, h, m, s)
+}
+
 fn ha_get(base: &str, path: &str) -> Result<String, String> {
     validate_ha_url(base)?;
     let url = format!("{}{}", normalize_url(base), path);
@@ -258,7 +279,7 @@ pub fn call_service(base: &str, domain: &str, service: &str, data: Option<&serde
     validate_service(service)?;
     let path = format!("/api/services/{}/{}", url_encode(domain), url_encode(service));
     let body_str = match data {
-        Some(d) => serde_json::to_string(d).unwrap_or_else(|_| "{}".to_string()),
+        Some(d) => serde_json::to_string(d).expect("serializing a serde_json::Value is infallible"),
         None => "{}".to_string(),
     };
     ha_post(base, &path, Some(&body_str))
@@ -291,7 +312,7 @@ pub fn fire_event(base: &str, event_type: &str, event_data: Option<&serde_json::
     validate_event_type(event_type)?;
     let path = format!("/api/events/{}", url_encode(event_type));
     let body_str = match event_data {
-        Some(d) => serde_json::to_string(d).unwrap_or_else(|_| "{}".to_string()),
+        Some(d) => serde_json::to_string(d).expect("serializing a serde_json::Value is infallible"),
         None => "{}".to_string(),
     };
     ha_post(base, &path, Some(&body_str))
@@ -299,8 +320,8 @@ pub fn fire_event(base: &str, event_type: &str, event_data: Option<&serde_json::
 
 pub fn render_template(base: &str, template: &str) -> Result<String, String> {
     validate_not_empty(template, "template")?;
-    if template.len() > 65536 {
-        return Err("template too large (max 64KB)".into());
+    if template.len() > MAX_TEMPLATE_LEN {
+        return Err(format!("template too large (max {} bytes)", MAX_TEMPLATE_LEN));
     }
     let body = serde_json::json!({"template": template});
     let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
@@ -316,16 +337,7 @@ pub fn get_history(base: &str, entity_id: &str, hours_back: u32, start_time: Opt
         validate_iso_prefix(st, "start_time")?;
         st.to_string()
     } else {
-        let now_ms = host::now_millis();
-        let start_ms = now_ms.saturating_sub((hours_back as u64) * 3600 * 1000);
-        let secs = start_ms / 1000;
-        let d = secs / 86400;
-        let rem = secs % 86400;
-        let h = rem / 3600;
-        let m = (rem % 3600) / 60;
-        let s = rem % 60;
-        let (y, mo, day) = days_to_ymd(d as i64);
-        format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, mo, day, h, m, s)
+        iso_timestamp_hours_ago(hours_back)
     };
     let path = format!("/api/history/period/{}?filter_entity_id={}", url_encode(&ts), url_encode(entity_id));
     ha_get(base, &path)
@@ -338,16 +350,7 @@ pub fn get_logbook(base: &str, entity_id: Option<&str>, hours_back: u32) -> Resu
     if hours_back == 0 || hours_back > MAX_HOURS_BACK {
         return Err(format!("hours_back must be between 1 and {}", MAX_HOURS_BACK));
     }
-    let now_ms = host::now_millis();
-    let start_ms = now_ms.saturating_sub((hours_back as u64) * 3600 * 1000);
-    let secs = start_ms / 1000;
-    let d = secs / 86400;
-    let rem = secs % 86400;
-    let h = rem / 3600;
-    let m = (rem % 3600) / 60;
-    let s = rem % 60;
-    let (y, mo, day) = days_to_ymd(d as i64);
-    let ts = format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, mo, day, h, m, s);
+    let ts = iso_timestamp_hours_ago(hours_back);
     let mut path = format!("/api/logbook/{}", url_encode(&ts));
     if let Some(eid) = entity_id {
         path.push_str(&format!("?entity={}", url_encode(eid)));
@@ -405,8 +408,8 @@ pub fn activate_scene(base: &str, entity_id: &str) -> Result<String, String> {
 
 pub fn mqtt_publish(base: &str, topic: &str, payload: &str, qos: Option<u8>, retain: Option<bool>) -> Result<String, String> {
     validate_not_empty(topic, "topic")?;
-    if topic.len() > 65535 {
-        return Err("topic too long (max 65535 bytes per MQTT spec)".into());
+    if topic.len() > MAX_MQTT_TOPIC_LEN {
+        return Err(format!("topic too long (max {} bytes per MQTT spec)", MAX_MQTT_TOPIC_LEN));
     }
     if topic.contains('\0') {
         return Err("topic must not contain null characters".into());
@@ -478,8 +481,8 @@ pub fn get_error_log(
     }
     // Prefer shell-backed tail for efficiency and to bypass REST truncation.
     if let Some(out) = shell::try_shell("get_error_log", ssh, |cfg| {
-        let path = log_path.unwrap_or("/config/home-assistant.log");
-        let lines = tail_lines.unwrap_or(200);
+        let path = log_path.unwrap_or(DEFAULT_HA_LOG_PATH);
+        let lines = tail_lines.unwrap_or(DEFAULT_SHELL_TAIL_LINES);
         shell::tail_file(cfg, path, lines)
     })? {
         return Ok(out);
